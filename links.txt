@@ -1,0 +1,8 @@
+http://www.music.mcgill.ca/~ich/classes/mumt306/StandardMIDIfileformat.html#BM3_
+https://music.stackexchange.com/questions/36223/whats-the-purpose-of-the-key-signature-information-in-a-midi-file#36225
+
+https://sites.uci.edu/camp2014/2014/05/19/timing-in-midi-files/
+
+http://www.music.mcgill.ca/~ich/classes/mumt306/StandardMIDIfileformat.html
+
+https://freetype.org/freetype2/docs/tutorial/step1.html#section-1
