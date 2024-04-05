@@ -240,14 +240,14 @@ void drawVisibleNotes(struct Song *song, uint8_t *noteBuffer, uint8_t trackMask,
     drawBars(timer);
     
     size_t i = leftIndex;
-    while(i < song->size){
-        struct Notes *notes = song->notes[i];
+    while(i < song->notesArraySize){
+        struct NotesPressGroup *notes = song->notesArray[i];
         if(timer + 4.0 < notes->timer){
             break;
         }
         
         for(size_t n = 0; n < notes->size; n++){
-            uint8_t noteMask = notes->notes[n]->trackMask;
+            uint8_t noteMask = 1 << notes->notes[n]->trackIndex;
             if(!(noteMask & trackMask)){
                 continue;
             }
@@ -271,13 +271,13 @@ void drawVisibleNotes(struct Song *song, uint8_t *noteBuffer, uint8_t trackMask,
 
 void turnOnNotes(struct Song *song, int midiDevice, uint8_t *noteBuffer, uint8_t trackMask){
     size_t currIndex = leftIndex;
-    while(currIndex < song->size){
-        struct Notes *notes = song->notes[currIndex];
+    while(currIndex < song->notesArraySize){
+        struct NotesPressGroup *notes = song->notesArray[currIndex];
         if(timer < notes->timer){
             break;
         }
         for(uint8_t i = 0; i < notes->size; i++){
-            uint8_t noteMask = notes->notes[i]->trackMask;
+            uint8_t noteMask = 1 << notes->notes[i]->trackIndex;
             uint8_t note = notes->notes[i]->type;
             float end = notes->timer + notes->notes[i]->duration;
             // printf("%i %i %f %f\n", i, note, notes->timer, timer);
@@ -329,17 +329,17 @@ uint16_t setTypeBit(int8_t j){
 // TODO: calculate error
 uint8_t match(struct Song *song, uint8_t *noteBuffer, uint8_t *userNoteBuffer, float *error){
     // uint16_t shouldBePressed[127] = {};
-    // if(song->size <= leftIndex){
+    // if(song->notesArraySize <= leftIndex){
     //     return 0;
     // }
     //
-    // struct Notes *notes = song->notes[leftIndex];
+    // struct NotesPressGroup *notes = song->notes[leftIndex];
     // 
     // // for(int8_t j = -1; j < 2; j++){
     //     // size_t nIndex = leftIndex + j;
     //     size_t nIndex = leftIndex;
     //     // uint16_t bit = setTypeBit(j);
-    //     // if(0 <= nIndex && nIndex < song->size){
+    //     // if(0 <= nIndex && nIndex < song->notesArraySize){
     //         for(uint8_t i = 0; i < notes->size; i++){
     //             shouldBePressed[notes->notes[i]->type] = i;// | bit;
     //         }
@@ -367,12 +367,10 @@ uint8_t match(struct Song *song, uint8_t *noteBuffer, uint8_t *userNoteBuffer, f
 // TODO: add different type of modes
 // TODO: add backtracking if enabled
 // TODO: make loop mode, start from x to y measure
-void learnSong(struct Song *song, uint8_t mode, uint8_t trackMask, uint8_t noteMask){
+void learnSong(struct Song *song, int midiDevice, uint8_t mode, uint8_t trackMask, uint8_t noteMask){
     uint8_t userNoteBuffer[127] = {};
     uint8_t noteBuffer[127] = {};
 
-    int midiDevice = midiDeviceInit();
-    
     timer = -1.5;
     speed = 1;
     float prevTime = 0;
@@ -393,9 +391,9 @@ void learnSong(struct Song *song, uint8_t mode, uint8_t trackMask, uint8_t noteM
         }
         // else{
         //     timer -= 1.0;
-        //     struct Notes *notes = song->notes[leftIndex];
+        //     struct NotesPressGroup *notes = song->notesArray[leftIndex];
         //     while(leftIndex && timer <= notes->timer){
-        //         notes = song->notes[--leftIndex];
+        //         notes = song->notesArray[--leftIndex];
         //     }
         // }
         turnOffNotes(0, noteBuffer);
@@ -405,9 +403,8 @@ void learnSong(struct Song *song, uint8_t mode, uint8_t trackMask, uint8_t noteM
     }
 }
 
-void playSong(struct Song *song, uint8_t noteMask){
+void playSong(struct Song *song, int midiDevice, uint8_t noteMask){
     uint8_t trackMask = 0xff;
-    int midiDevice = midiDeviceInit();
     uint8_t noteBuffer[127] = {};
 
     float prevTime = 0;
@@ -421,18 +418,18 @@ void playSong(struct Song *song, uint8_t noteMask){
         }
     
         glClear(GL_COLOR_BUFFER_BIT);
-        if(song->size <= leftIndex){
-            printf("leftIndex to big %zu %zu\n", song->size, leftIndex);
+        if(song->notesArraySize <= leftIndex){
+            printf("leftIndex to big %zu %zu\n", song->notesArraySize, leftIndex);
             return;
         }
 
-        struct Notes *notes = song->notes[leftIndex];
+        struct NotesPressGroup *notes = song->notesArray[leftIndex];
         while(notes->timerEnd < timer){
-            if(song->size <= leftIndex + 1){
+            if(song->notesArraySize <= leftIndex + 1){
                 return;
             }
-            if(song->notes[leftIndex + 1]->timerEnd < timer){
-                notes = song->notes[leftIndex++];
+            if(song->notesArray[leftIndex + 1]->timerEnd < timer){
+                notes = song->notesArray[leftIndex++];
             }
             else{
                 break;

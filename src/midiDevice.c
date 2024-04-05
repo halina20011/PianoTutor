@@ -1,9 +1,29 @@
 #include "midiDevice.h"
 
-const char *midiDeviceName = "/dev/snd/midiC1D0";
+#define MIDI_MATCH_PATH "/dev/snd/midi*"
 
-int midiDeviceInit(){
-    int f = open(midiDeviceName, O_RDWR | O_NONBLOCK);
+int midiDeviceInit(char *path){
+    char *midiDevicePath = NULL;
+    if(strcmp(path, "auto") == 0){
+        // man 3 glob
+        glob_t globResult;
+        int globStatus = glob(MIDI_MATCH_PATH, 0, NULL, &globResult);
+        if(globStatus){
+            fprintf(stderr, "no file that matches %s\n", MIDI_MATCH_PATH);
+            exit(1);
+        }
+
+        char *firstMatch = globResult.gl_pathv[0];
+        if(firstMatch){
+            printf("matches %s\n", firstMatch);
+            midiDevicePath = firstMatch;
+        }
+    }
+    if(midiDevicePath == NULL){
+        fprintf(stderr, "no midi device\n");
+        exit(1);
+    }
+    int f = open(midiDevicePath, O_RDWR | O_NONBLOCK);
     if(f < 0){
         fprintf(stderr, "failed to open midi device\n");
         exit(1);

@@ -38,12 +38,19 @@
 
 #define EVENT_SONG_SELECT               0b11110011
 
+#define META_TRACK_NAME             0x03
+#define META_PREFIX_PORT            0x20
+#define META_PREFIX_PORT_SIZE       2
+#define META_MIDI_PORT              0x21
+#define META_MIDI_PORT_SIZE         2
 #define META_SET_TEMPO              0x51
 #define META_SET_TEMPO_SIZE         3 
 #define META_SMPTE_OFFSET           0x54
 #define META_SMPTE_OFFSET_SIZE      5
 #define META_TIME_SIGNATURE         0x58
 #define META_TIME_SIGNATURE_SIZE    4
+#define META_KEY_SIGNATURE          0x59
+#define META_KEY_SIGNATURE_SIZE     2
 
 #define CHECK_META_DATA_SIZE(M_SIZE) do{ \
     if(metaDataLength != M_SIZE){ \
@@ -59,34 +66,7 @@ static char noteNames[NUMBER_OF_NOTES][3] = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "H"
 };
 
-enum NoteValue{
-    WHOLE,
-    WHOLE_DOT,
-    HALF,
-    HALF_DOT,
-    QUARTER,
-    QUARTER_DOT,
-    EIGHT,
-    EIGHT_DOT,
-};
-
-// static char NoteValuesNames[NUMBER_OF_NOTES * 2][15] = {
-//     "whole",
-//     "whole dot",
-//     "half",
-//     "half dot",
-//     "quarter",
-//     "quarter dot",
-//     "eight",
-//     "eight dot",
-// };
-//
-// struct NoteDuration{
-//     double duration;
-//     uint8_t noteValue;
-// };
-
-// static struct NoteDuration noteDurations[NUMBER_OF_NOTES * 2];
+#define MAX_TRACK_SIZE 8
 
 struct Chunk{
     uint8_t name[4];
@@ -97,33 +77,62 @@ struct Chunk{
 struct Note{
     uint8_t type;
     float start, duration;
-    uint8_t trackMask;
+    uint8_t trackIndex;
 };
 
-struct Notes{
+struct NotesPressGroup{
     struct Note **notes;
     uint8_t size;
     float timer, timerEnd;
+    uint32_t BMP;
 };
 
 struct TrackInfo{
     uint8_t minNote, maxNote;
+    uint8_t n, d, c, b;
 };
 
-#define MAX_TRACK_SIZE 8
-
+// struct Song
+// holds an array of all notes
+// holds an array of measures
 struct Song{
-    struct Notes **notes;
-    uint32_t PPQ;
-    size_t size;
+    struct Measure *measures;
+    size_t measureSize;
+    struct NotesPressGroup **notesArray;
+    size_t notesArraySize;
     struct TrackInfo *tracksInfo[MAX_TRACK_SIZE];
+    uint8_t trackSize;
+};
+
+// struct measure:
+// start index will point to the fisrt note in the song notes array
+// will have an table of size n that will map 
+// n is calculated with (measure duration/min duration)
+struct Measure{
+    size_t index;
+    struct NotePressGroup **tracks;
+    size_t trackSize;
+    uint32_t PPQ;
+};
+
+struct NoteInfo{
+    float correctDuration;
+    float firstTimerValue;
+    size_t count;
+};
+
+struct SongInfo{
+    int percision;
+    float max;
+    float upbeat;
+    struct NoteInfo *noteInfo;
+    size_t noteInfoSize;
 };
 
 struct Song *midiParser(const char *filePath);
 
 struct Chunk *chunkInit();
 struct Note *noteInit(uint8_t type, float start, float duration, uint8_t trackMask);
-struct Notes *notesInit(struct Note **n, size_t size);
 
 uint32_t variableLengthValue(uint8_t *data, uint32_t *endOffset);
 void calculateNoteDurations();
@@ -131,9 +140,13 @@ double getClosestNote(double);
 
 void addEvent(struct Note *notes, struct List *list, uint8_t velocity, uint32_t delta, uint32_t PPQ);
 
-struct List *parseTrack(uint8_t *data, uint32_t size, uint32_t PPQ, uint8_t trackMask, struct TrackInfo **returnTrackInfo);
+struct List *parseTrack(uint8_t *data, uint32_t size, uint32_t PPQ, uint8_t trackIndex, struct TrackInfo **returnTrackInfo);
 
-void analyse(struct Song *song, int percision);
 struct Song *generateSong();
+
+void analyse(struct Song *song, struct SongInfo *songInfo);
+void printAnalysis(struct SongInfo songInfo);
+
+void printSongInfo(struct SongInfo songInfo);
 
 #endif

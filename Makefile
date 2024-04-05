@@ -3,7 +3,7 @@ CC = gcc
 FILES = $(wildcard ./src/*.c)
 OBJECTS = $(patsubst ./src/%.c, ./build/%.o, $(FILES))
 # LDFLAGS = -lm -lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lGLEW -lEGL -lGL -lGLU -lOpenGL
-LDFLAGS = $(shell pkg-config --static --libs glew) $(shell pkg-config --libs glfw3)
+LDFLAGS = -lc -lm $(shell pkg-config --static --libs glew) $(shell pkg-config --libs glfw3)
 
 CPPFLAGS =
 CFLAGS = -Wall -Wextra -Wshadow
@@ -21,8 +21,10 @@ build/%.o: src/%.c
 main: $(OBJECTS)
 	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o ./build/$@
 
+flags = -m /home/mario/Documents/Notes/houseOfWolves.mid
+
 run: main
-	./build/main
+	./build/main $(flags)
 
 bitmap: bitmapFont.c
 	gcc $(shell pkg-config --cflags --libs freetype2) bitmapFont.c -o ./build/bitmapFont && ./build/bitmapFont

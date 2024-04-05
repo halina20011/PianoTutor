@@ -110,7 +110,7 @@ void loadTextures(){
     int offset = 0;
     for(int i = 0; i < TEXTURE_COUNT; i++){
         glGenTextures(1, &(textures[i]));
-        // printf("generated %i texture\n", textures[i]);
+        printf("generated %i texture name: %i\n", i, textures[i]);
         glBindTexture(GL_TEXTURE_2D, textures[i]);
         // 
         for(int y = 0; y < TEXTURE_SIZE; y++){
@@ -184,6 +184,7 @@ void GLAPIENTRY messageCallback(GLenum source, GLenum type, GLuint id, GLenum se
 
 void drawTexture(uint8_t textureIndex, float x, float y, float width, float height){
     GLint texture = textures[textureIndex];
+    // printf("n %i => %i\n", textureIndex, texture);
     // printf("%i\n", texture);
     // GLfloat vertices[] = {
     //     // Positions       // Texture Coords
@@ -195,9 +196,9 @@ void drawTexture(uint8_t textureIndex, float x, float y, float width, float heig
     
     height *= screenRatio;
 
-    glBindVertexArray(textureVao);
     // glBindBuffer(GL_ARRAY_BUFFER, textureVbo);
     glUseProgram(textureProgram);
+    glBindVertexArray(textureVao);
     glActiveTexture(GL_TEXTURE0 + texture);
     glBindTexture(GL_TEXTURE_2D, texture);
     glUniform1i(textureSamplerUniform, texture);
