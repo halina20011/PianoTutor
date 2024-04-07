@@ -21,7 +21,11 @@ build/%.o: src/%.c
 main: $(OBJECTS)
 	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o ./build/$@
 
-flags = -m /home/mario/Documents/Notes/houseOfWolves.mid
+# flags = -m /home/mario/Documents/Notes/houseOfWolves.mid
+# flags = -m /home/mario/Documents/Notes/The_World_-_Death_Note.mscz.mid
+# flags = -m /home/mario/Documents/Notes/Gossip.mid
+flags = -m /home/mario/Documents/Notes/famousLastWords.mid
+# flags = --help
 
 run: main
 	./build/main $(flags)
@@ -43,5 +47,4 @@ urun: update run
 
 debug: CFLAGS += -O0 -ggdb
 debug: main
-	@echo ${DARGS}
-	gdb -ex "set debuginfod enabled off" -ex "set args $(DARGS)" -ex run ./build/main
+	gdb -ex "set debuginfod enabled off" -ex "set args $(flags)" -ex run ./build/main

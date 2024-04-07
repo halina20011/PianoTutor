@@ -3,19 +3,25 @@
 const int INPUT_TYPES_SIZES[] = {0, 0, 1, 1, 1};
 
 char *joinFlags(struct Input input, int before, int wholeSize){
-    char buffer[JOIN_FLAGS_BUFFER + 1] = {' ', ' '};
+    char buffer[JOIN_FLAGS_BUFFER + 1];
+    int size = 0;
+    for(int i = 0; i < before; i++){
+        buffer[size++] = ' ';
+    }
     
-    int size = 2;
+    // join the flags together
     for(uint8_t f = 0; f < input.flagsSize; f++){
         size_t s = strlen(input.flags[f]);
         memcpy(buffer + size, input.flags[f], s);
         size += s;
+        // is another flags succeed add ", "
         if(f + 1 < input.flagsSize){
             buffer[size++] = ',';
             buffer[size++] = ' ';
         }
     }
     
+    // add spaces so the text after will be aligned
     memset(buffer + size, ' ', wholeSize - size);
     buffer[wholeSize] = 0;
 
@@ -36,15 +42,16 @@ void printHelpMessage(struct InputParser inputParser){
     memset(empty, ' ', inputParser.flagsColSize);
     empty[inputParser.flagsColSize] = 0;
 
-    int messaageSize = (windowSize) ? windowSize - flagsSize : 0;
+    int messageSize = (windowSize) ? windowSize - flagsSize : 0;
 
     printf("usage: [flag] [option]\n");
     for(size_t i = 0; i < inputParser.inputsSize; i++){
         struct Input input = inputParser.inputs[i];
-        char *str = joinFlags(input, inputParser.flagsColSize, inputParser.flagsColSize);
+        char *str = joinFlags(input, inputParser.flagsOffset, inputParser.flagsColSize);
         printf("%s", str);
+        free(str);
 
-        if(messaageSize == 0){
+        if(messageSize == 0){
             printf("%s\n", input.message);
         }
         else{
@@ -60,7 +67,7 @@ void printHelpMessage(struct InputParser inputParser){
                     mPtr++;
                     size = 0;
                 }
-                else if(messaageSize <= size){
+                else if(messageSize <= size){
                     printf("%s", empty);
                     size = 0;
                 }

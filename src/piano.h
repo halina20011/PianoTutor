@@ -5,8 +5,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "color.h"
 #include "graphics.h"
 #include "midiDevice.h"
+#include "text.h"
+#include "window.h"
 
 #define C_NOTE           0
 #define C_NOTE_SHARP     1

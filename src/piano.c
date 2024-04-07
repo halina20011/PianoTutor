@@ -17,12 +17,41 @@ float notePositions[127];
 uint8_t whiteKeys = 52, blackKeys = 33;
 float whiteKey, blackKey;
 
-void pianoInit(){
-    graphicsInit();
+float noteCanvasScale = 0.6f;
+float durationsDrawCount = 4;
 
-    float size = 2.0/90.0;
-    setTextSize(size);
+GLint colorUniform;
+struct Shader *shader;
+
+struct Graphics *g = NULL;
+struct Text *text = NULL;
+
+#define UNUSED(x) (void)(x)
+
+void scrollCallback(GLFWwindow *w, double x, double y){
+    UNUSED(w);
+    UNUSED(x);
+    noteCanvasScale += (float)(y) * 0.1f * noteCanvasScale;
+    if(noteCanvasScale < 0.05){
+        noteCanvasScale = 0.05;
+    }
+
+    durationsDrawCount = 1.5f / noteCanvasScale;
+}
+
+void pianoInit(){
+    g = graphicsInit();
+    glfwSetScrollCallback(g->window, scrollCallback);
+    text = textInit(&g->screenRatio);
+
     precalculateNotes();
+
+    shader = shaderInit(VERTEX_SHADER, FRAGMENT_SHADER);
+    GLint posAttrib = glGetAttribLocation(shader->program, "position");
+    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(posAttrib);
+
+    colorUniform = glGetUniformLocation(shader->program, "color");
 }
 
 void pianoExit(){
@@ -88,12 +117,11 @@ void precalculateNotes(){
     printf("first note name %i\n", firstNote);
     reCountNotes();
 
-    whiteKey = 2.0 / (float)whiteKeys;
+    whiteKey = 1.0 / (float)whiteKeys;
     blackKey = whiteKey / 2.0;
 
     float blackKeyThird = blackKey / 3.0;
 
-    // float sum = 0;
     for(int i = 0; i < NUMBER_OF_NOTES; i++){
         if(!notations[i]){
             if(i == C_NOTE || i == D_NOTE || i == E_NOTE || i == F_NOTE || i == H_NOTE){
@@ -106,10 +134,7 @@ void precalculateNotes(){
         else{
             sizes[i] = blackKey;
         }
-        // sum += sizes[i];
-        // printf("%f %s\n", sizes[i], noteNames[i]);
     }
-    // printf("\n%f %f\n", sum, whiteKey * 7.0);
 
     float prevPos = 0;
     notePositions[firstNote] = 0.0;
@@ -138,13 +163,13 @@ void precalculateNotes(){
 }
 
 void drawPiano(uint8_t *noteBuffer, uint8_t noteMask){
-    float start = -0.5;
-    setColor1(1);
-    drawRectangle(0, 0, 2, start);
-
+    setWindow(-1.0f, -1.0f, 2.0f, 0.5f);
+    SET_COLOR(colorUniform, WHITE);
+    drawRectangle(FORMAT(0, 0, 1.0f, 1.0f));
+    
     uint8_t blackNotes[127];
     uint8_t blackNotesSize = 0;
-    setColor(0, 1, 0);
+    SET_COLOR(colorUniform, GREEN);
     uint8_t noteIndex = 0;
     for(size_t i = firstNote; i <= lastNote; i++){
         uint8_t note = i % 12;
@@ -161,70 +186,61 @@ void drawPiano(uint8_t *noteBuffer, uint8_t noteMask){
         float pos = (float)noteIndex * whiteKey;
         float w = whiteKey;
         
-        drawRectangle(pos, 0, w, start);
+        drawRectangle(FORMAT(pos, 0, w, 1));
         noteIndex++;
     }
 
     uint8_t whiteKeyIndex = 0;
-    setTextureColor(0);
+    useShader(text->shader);
+    textColor(text, (struct TextColor){0, 0, 0});
     for(uint8_t n = firstNote; n <= lastNote; n++){
         uint8_t note = n % 12;
         if(notations[note]){
             continue;
         }
         if((1 << whiteKeyPostion[note]) & noteMask){
-            uint8_t textureIndex = whiteKeyPostion[note] + 10;
-            // uint8_t textureIndex = 11;
-            // printf("t: %i %i => %i\n", textureIndex, note, whiteKeyPostion[note]);
             float size = whiteKey * 0.5;
-            drawTexture(textureIndex, (float)whiteKeyIndex * whiteKey, -0.5, size, size);
+            textDraw(text, "C", (float)whiteKeyIndex * whiteKey - 1.0f, -1, size);
         }
         whiteKeyIndex++;
     }
-    setTextureColor(1);
 
-    // draw notes edges on canvas
-    for(uint8_t noteIndex = firstNote; noteIndex <= lastNote; noteIndex++){
-        uint8_t note = noteIndex % 12;
-        if(note == C_NOTE || note == E_NOTE){
-            float pos = notePositions[noteIndex];
-            drawLine(pos, 1.5, pos, 0);
-        }
-    }
-
+    useShader(shader);
+    SET_COLOR(colorUniform, BLACK);
     // draw notes edges on keyboard
     for(size_t i = 0; i < whiteKeys; i++){
         float pos = i * whiteKey;
-        drawLine(pos, 0, pos, start);
+        drawLine(FORMAT_2P(pos, 0.0f, pos, 1.0f));
     }
 
-    start = -0.3;
-    setColor1(0);
     for(uint8_t n = 0; n < blackNotesSize; n++){
         uint8_t i = blackNotes[n];
 
         if(noteBuffer[i]){
-            setColor(1, 0, 0);
+            SET_COLOR(colorUniform, RED);
         }
 
         float pos = notePositions[i];
-        drawRectangle(pos, 0, blackKey, start);
+        drawRectangle(FORMAT(pos, 0.4f, blackKey, 0.6f));
 
         if(noteBuffer[i]){
-            setColor1(0);
+            SET_COLOR(colorUniform, BLACK);
         }
     }
-
-    setColor1(1);
 }
 
 void drawBars(float t){
     int measure = (int)t;
     float y = t - measure;
-    for(int i = 0; i < 4; i++){
-        float yPos = (float)i - y;
-        drawNumber(measure + i, yPos);
-        drawLine(0, yPos, 2, yPos);
+    for(int i = 0; i < (int)durationsDrawCount; i++){
+        float yPos = ((float)i - y) * noteCanvasScale;
+        useShader(text->shader);
+        textColor(text, (struct TextColor){1, 1, 1});
+        T_PRINTF(windowX(0.05f), windowY(yPos), windowWidth(0.02), "%i", measure + i);
+
+        useShader(shader);
+        SET_COLOR(colorUniform, WHITE);
+        drawLine(FORMAT_2P(0, yPos, 2, yPos));
     }
 }
 
@@ -237,12 +253,25 @@ void drawBars(float t){
 // 
 // draw all black notes
 void drawVisibleNotes(struct Song *song, uint8_t *noteBuffer, uint8_t trackMask, uint8_t noteMask){
+    setWindow(-1.f, -.5f, 2.0f, 1.5f);
     drawBars(timer);
     
+    useShader(shader);
+    SET_COLOR(colorUniform, WHITE);
+    // draw notes edges on note canvas
+    for(uint8_t noteIndex = firstNote; noteIndex <= lastNote; noteIndex++){
+        uint8_t note = noteIndex % 12;
+        if(note == C_NOTE || note == E_NOTE){
+            float pos = notePositions[noteIndex];
+            // drawLine(pos, 1.5, pos, 0);
+            drawLine(FORMAT_2P(pos, 0, pos, 1));
+        }
+    }
+
     size_t i = leftIndex;
     while(i < song->notesArraySize){
         struct NotesPressGroup *notes = song->notesArray[i];
-        if(timer + 4.0 < notes->timer){
+        if(timer + durationsDrawCount < notes->timer){
             break;
         }
         
@@ -253,14 +282,14 @@ void drawVisibleNotes(struct Song *song, uint8_t *noteBuffer, uint8_t trackMask,
             }
 
             uint8_t note = notes->notes[n]->type;
-            float duration = notes->notes[n]->duration;
+            float duration = notes->notes[n]->duration * noteCanvasScale;
             uint8_t noteName = note % 12;
 
             float pos = notePositions[note];
-            float posY = notes->timer - timer;
+            float posY = (notes->timer - timer) * noteCanvasScale;
             float w = sizes[noteName];
             
-            drawRectangle(pos, posY, w, duration);
+            drawRectangle(FORMAT(pos, posY, w, duration));
         }
 
         i++;
@@ -398,7 +427,8 @@ void learnSong(struct Song *song, int midiDevice, uint8_t mode, uint8_t trackMas
         // }
         turnOffNotes(0, noteBuffer);
         drawVisibleNotes(song, noteBuffer, trackMask, noteMask);
-        swap();
+        swap(g);
+
         prevTime = currentTime;
     }
 }
@@ -439,7 +469,7 @@ void playSong(struct Song *song, int midiDevice, uint8_t noteMask){
         turnOnNotes(song, midiDevice, noteBuffer, trackMask);
         turnOffNotes(midiDevice, noteBuffer);
         drawVisibleNotes(song, noteBuffer, trackMask, noteMask);
-        swap();
+        swap(g);
 
         prevTime = currentTime;
     }

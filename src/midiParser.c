@@ -518,7 +518,6 @@ struct Song *midiParser(const char *filePath){
     for(size_t i = 0; curr; i++){
         struct List *l = curr->val;
         // printf("size %zu\n", l->size);
-        printf("p %p\n", l);
         // printf("track p: %p\n", l->head->val);
         tracksArray[i] = l;
         curr = curr->next;
@@ -548,7 +547,7 @@ void analyse(struct Song *song, struct SongInfo *songInfo){
     songInfo->max = max;
     size_t tableSize = (int)(max * (float)songInfo->percision) + 1;
     struct NoteInfo *table = malloc(sizeof(struct NoteInfo) * tableSize);
-    printf("tableSize: %zu bytes\n", sizeof(struct NoteInfo) * tableSize);
+    // printf("tableSize: %zu bytes\n", sizeof(struct NoteInfo) * tableSize);
 
     for(size_t i = 0; i < song->notesArraySize; i++){
         struct NotesPressGroup *n = song->notesArray[i];

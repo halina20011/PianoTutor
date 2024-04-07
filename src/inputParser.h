@@ -22,6 +22,7 @@ struct Input{
 };
 
 struct InputParser{
+    int flagsOffset;
     int flagsColSize;
     size_t inputsSize;
     struct Input inputs[10];

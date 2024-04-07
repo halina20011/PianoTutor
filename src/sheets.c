@@ -93,7 +93,7 @@ void correctDurations(char *correctionFilePath, struct SongInfo *songInfo){
         if(sscanf(line, "%f,%f", &dur1, &dur2) == 2){
             int hash = (dur1 * (float)songInfo->percision);
             songInfo->noteInfo[hash].correctDuration = dur2;
-            printf("%f corrected to %f\n", dur1, dur2);
+            // printf("%f corrected to %f\n", dur1, dur2);
         }
         // else{
         //     printf("%f doesn't have correct value\n", dur1);
@@ -103,7 +103,7 @@ void correctDurations(char *correctionFilePath, struct SongInfo *songInfo){
 }
 
 void flushMeasure(struct Measure *m, uint8_t trackSize, struct Note **stack, size_t *stackSize, size_t *eachTrackNoteCount){
-    printf("measure has %zu notes\n", *stackSize);
+    // printf("measure has %zu notes\n", *stackSize);
     size_t eachTrackNoteIndex[MAX_TRACK_SIZE] = {};
 
     // allocate for eatch track the count of notes that it will have
@@ -128,22 +128,22 @@ void flushMeasure(struct Measure *m, uint8_t trackSize, struct Note **stack, siz
 }
 
 void addToMeasure(struct NotesPressGroup *npg, struct Note **stack, size_t *stackSize, size_t *eachTrackNoteCount){
-    printf("adding: ");
+    // printf("adding: ");
     for(size_t j = 0; j < npg->size; j++){
         struct Note *note = npg->notes[j];
         eachTrackNoteCount[note->trackIndex]++;
-        printf("%s, ", noteNames[note->type % 12]);
+        // printf("%s, ", noteNames[note->type % 12]);
         stack[(*stackSize)++] = note;
     }
-    printf("\n");
+    // printf("\n");
 }
 
 void generateMeasure(struct Song *song, struct SongInfo songInfo){
     struct NotesPressGroup *last = song->notesArray[song->notesArraySize - 1];
     // TODO: song can have different time signatures
     size_t measureSize = (last->timerEnd - songInfo.upbeat) / 4 + (songInfo.upbeat != 0);
-    printf("lastTimer %zu\n", measureSize);
-    printf("songInfo, %i %f\n", song->trackSize, songInfo.upbeat);
+    // printf("lastTimer %zu\n", measureSize);
+    // printf("songInfo, %i %f\n", song->trackSize, songInfo.upbeat);
     struct Measure *measures = malloc(sizeof(struct Measure) * measureSize);
     size_t measureIndex = 0;
     
@@ -158,7 +158,7 @@ void generateMeasure(struct Song *song, struct SongInfo songInfo){
     // create upbeat
     size_t i = 0;
     if(songInfo.upbeat != 0){
-        printf("upbeat set %f\n", songInfo.upbeat);
+        // printf("upbeat set %f\n", songInfo.upbeat);
         for(; i < song->notesArraySize;){
             if(songInfo.upbeat <= song->notesArray[i]->timer){
                 flushMeasure(&measures[measureIndex], song->trackSize, stack, &stackSize, eachTrackNoteCount);
@@ -176,7 +176,7 @@ void generateMeasure(struct Song *song, struct SongInfo songInfo){
     size_t currMeasureIndex = 0;
     for(;i < song->notesArraySize;){
         if((currMeasureIndex + 1) * 4 <= song->notesArray[i]->timer - songInfo.upbeat){
-            printf("measure ends on timer %f\n", song->notesArray[i]->timer);
+            // printf("measure ends on timer %f\n", song->notesArray[i]->timer);
             flushMeasure(&measures[measureIndex++], song->trackSize, stack, &stackSize, eachTrackNoteCount);
             currMeasureIndex++;
         }

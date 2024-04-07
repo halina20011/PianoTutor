@@ -32,6 +32,7 @@ bool asignNotes = false;
 bool showNotes = false;
 
 struct InputParser inputParser = {
+    4,
     30,
     10,
     {
@@ -52,21 +53,6 @@ struct InputParser inputParser = {
     },
 };
 
-// struct Song *song = midiParser("/home/mario/Documents/Notes/Thomas_the_tank_engine_theme.mid");
-// struct Song *song = midiParser("/home/mario/Documents/Notes/houseOfWolves.mid");
-// struct Song *song = midiParser("/home/mario/Documents/Notes/King_For_a_Day_-_Pierce_the_Veil.mid");
-// struct Song *song = midiParser("/home/mario/Documents/Notes/Mr_Doctor_Man_-_Palaye_Royale.mid");
-// struct Song *song = midiParser("/home/mario/Documents/Notes/Year_Zero.mid");
-// struct Song *song = midiParser("/home/mario/Documents/Notes/Rats.mid");
-// struct Song *song = midiParser("/home/mario/Documents/Notes/Life_Eternal__Ghost_Piano_advanced.mid");
-// struct Song *song = midiParser("/home/mario/Documents/Notes/YOASOBI_marasy_full_ver..mid");
-// struct Song *song = midiParser("/home/mario/Documents/Notes/The_World_-_Death_Note.mscz.mid");
-// struct Song *song = midiParser("/home/mario/Downloads/chopin_prelude_28_4.mid");
-// struct Song *song = midiParser("/home/mario/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mid");
-// struct Song *song = midiParser("/home/mario/Documents/Notes/Fantaisie-Impromptu_in_C_Minor__Chopin.mid");
-// struct Song *song = generateSong();
-// struct Song *song = midiParser("/home/mario/Downloads/test.mid");
-// struct Song *song = midiParser("/home/mario/Documents/Notes/Giornos_Theme.mid");
 int main(int argc, char **argv){
     parseInput(inputParser, argc, argv);
 
