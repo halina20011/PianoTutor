@@ -162,7 +162,7 @@ void precalculateNotes(){
     }
 }
 
-void drawPiano(uint8_t *noteBuffer, uint8_t noteMask){
+void drawPiano(uint8_t *noteBuffer, uint8_t notesNameMask){
     setWindow(-1.0f, -1.0f, 2.0f, 0.5f);
     SET_COLOR(colorUniform, WHITE);
     drawRectangle(FORMAT(0, 0, 1.0f, 1.0f));
@@ -198,7 +198,7 @@ void drawPiano(uint8_t *noteBuffer, uint8_t noteMask){
         if(notations[note]){
             continue;
         }
-        if((1 << whiteKeyPostion[note]) & noteMask){
+        if((1 << whiteKeyPostion[note]) & notesNameMask){
             float size = whiteKey * 0.5;
             textDraw(text, "C", (float)whiteKeyIndex * whiteKey - 1.0f, -1, size);
         }
@@ -252,7 +252,7 @@ void drawBars(float t){
 // draw notes lines
 // 
 // draw all black notes
-void drawVisibleNotes(struct Song *song, uint8_t *noteBuffer, uint8_t trackMask, uint8_t noteMask){
+void drawVisibleNotes(struct Song *song, uint8_t *noteBuffer, uint8_t trackMask, uint8_t notesNameMask){
     setWindow(-1.f, -.5f, 2.0f, 1.5f);
     drawBars(timer);
     
@@ -276,8 +276,8 @@ void drawVisibleNotes(struct Song *song, uint8_t *noteBuffer, uint8_t trackMask,
         }
         
         for(size_t n = 0; n < notes->size; n++){
-            uint8_t noteMask = 1 << notes->notes[n]->trackIndex;
-            if(!(noteMask & trackMask)){
+            uint8_t noteTrackMask = 1 << notes->notes[n]->trackIndex;
+            if(!(noteTrackMask & trackMask)){
                 continue;
             }
 
@@ -295,7 +295,7 @@ void drawVisibleNotes(struct Song *song, uint8_t *noteBuffer, uint8_t trackMask,
         i++;
     }
 
-    drawPiano(noteBuffer, noteMask);
+    drawPiano(noteBuffer, notesNameMask);
 }
 
 void turnOnNotes(struct Song *song, int midiDevice, uint8_t *noteBuffer, uint8_t trackMask){
@@ -306,11 +306,11 @@ void turnOnNotes(struct Song *song, int midiDevice, uint8_t *noteBuffer, uint8_t
             break;
         }
         for(uint8_t i = 0; i < notes->size; i++){
-            uint8_t noteMask = 1 << notes->notes[i]->trackIndex;
+            uint8_t noteTrackMask = 1 << notes->notes[i]->trackIndex;
             uint8_t note = notes->notes[i]->type;
             float end = notes->timer + notes->notes[i]->duration;
             // printf("%i %i %f %f\n", i, note, notes->timer, timer);
-            if((noteMask & trackMask) && !noteBuffer[note] && notes->timer < timer && timer < end){
+            if((noteTrackMask & trackMask) && !noteBuffer[note] && notes->timer < timer && timer < end){
                 noteBuffer[note] = 1;
                 pressedNotes[pressedNotesSize++] = (struct PressedNote){note, end};
                 if(midiDevice){
@@ -396,7 +396,7 @@ uint8_t match(struct Song *song, uint8_t *noteBuffer, uint8_t *userNoteBuffer, f
 // TODO: add different type of modes
 // TODO: add backtracking if enabled
 // TODO: make loop mode, start from x to y measure
-void learnSong(struct Song *song, int midiDevice, uint8_t mode, uint8_t trackMask, uint8_t noteMask){
+void learnSong(struct Song *song, int midiDevice, uint8_t mode, uint8_t trackMask, uint8_t notesNameMask){
     uint8_t userNoteBuffer[127] = {};
     uint8_t noteBuffer[127] = {};
 
@@ -426,15 +426,15 @@ void learnSong(struct Song *song, int midiDevice, uint8_t mode, uint8_t trackMas
         //     }
         // }
         turnOffNotes(0, noteBuffer);
-        drawVisibleNotes(song, noteBuffer, trackMask, noteMask);
+        drawVisibleNotes(song, noteBuffer, trackMask, notesNameMask);
         swap(g);
 
         prevTime = currentTime;
     }
 }
 
-void playSong(struct Song *song, int midiDevice, uint8_t noteMask){
-    uint8_t trackMask = 0xff;
+void playSong(struct Song *song, int midiDevice, uint8_t notesNameMask){
+    const uint8_t trackMask = 0xff;
     uint8_t noteBuffer[127] = {};
 
     float prevTime = 0;
@@ -468,7 +468,7 @@ void playSong(struct Song *song, int midiDevice, uint8_t noteMask){
 
         turnOnNotes(song, midiDevice, noteBuffer, trackMask);
         turnOffNotes(midiDevice, noteBuffer);
-        drawVisibleNotes(song, noteBuffer, trackMask, noteMask);
+        drawVisibleNotes(song, noteBuffer, trackMask, notesNameMask);
         swap(g);
 
         prevTime = currentTime;

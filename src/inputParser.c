@@ -1,6 +1,6 @@
 #include "inputParser.h"
 
-const int INPUT_TYPES_SIZES[] = {0, 0, 1, 1, 1};
+const int INPUT_TYPES_SIZES[] = {0, 0, 1, 1, 1, 1};
 
 char *joinFlags(struct Input input, int before, int wholeSize){
     char buffer[JOIN_FLAGS_BUFFER + 1];
@@ -112,6 +112,9 @@ void parseInput(struct InputParser inputParser, int argc, char **argv){
                         break;
                     case INPUT_TYPE_INT:
                         *((int*)input.variable) = strtol(argv[i + 1], NULL, 10);
+                        break;
+                    case INPUT_TYPE_UINT8_T:
+                        *((uint8_t*)input.variable) = strtol(argv[i + 1], NULL, 10);
                         break;
                     case INPUT_TYPE_FLOAT:
                         printf("float: %s\n", argv[i + 1]);

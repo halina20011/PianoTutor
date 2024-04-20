@@ -48,9 +48,8 @@ void precalculateNotes();
 void selectRegion(struct Song *song, uint8_t trackMask);
 
 void drawVisibleNotes(struct Song *song, uint8_t *noteBuffer, uint8_t trackMask, uint8_t noteMask);
-void drawSong(struct Song *song, uint8_t *noteBuffer, int midiDevice);
 
-void learnSong(struct Song *song, int midiDevice, uint8_t mode, uint8_t trackMask, uint8_t noteMask);
-void playSong(struct Song *song, int midiDevice, uint8_t noteMask);
+void learnSong(struct Song *song, int midiDevice, uint8_t mode, uint8_t trackMask, uint8_t notesNameMask);
+void playSong(struct Song *song, int midiDevice, uint8_t notesNameMask);
 
 #endif

@@ -10,9 +10,7 @@
 //     uint32_t r = variableLengthValue(data, &i);
 //     printf("%X %u\n", r, r);
 // }
-//
 
-// TODO: parse input arguments
 // TODO: correct track numbers
 // TODO: use correct tempto from Song struct
 // TODO: create note sheet window
@@ -23,18 +21,21 @@ char *midiFilePath = NULL;
 char *midiDevicePath;
 char *mode;
 char *difficulty;
+
 float upbeatDur = 0.0;
+float upbeatRestDur = 0.0;
+
 char *difficulty;
 char *correctionFilePath;
-int percision = 1000;
-bool analyseNoteDurations;
+uint8_t percisionLevel = 3;
+bool printSongsNoteDurations;
 bool asignNotes = false;
 bool showNotes = false;
 
 struct InputParser inputParser = {
     4,
     30,
-    10,
+    11,
     {
         FLAG_2_SIZE("-h", "--help", &printHelp, INPUT_TYPE_SWITCH, "print this help message"),
         FLAG_2_SIZE("-m", "--midi", &midiFilePath, INPUT_TYPE_STR, "specifi midi file"),
@@ -45,10 +46,11 @@ struct InputParser inputParser = {
 
         FLAG_1_SIZE("--difficulty", &difficulty, INPUT_TYPE_STR, "select difficulty for play mode"),
         FLAG_1_SIZE("--upbeat", &upbeatDur, INPUT_TYPE_FLOAT, "define upbeat duration"),
-        FLAG_1_SIZE("-p", &percision, INPUT_TYPE_INT, "sep percision for note songInfo"),
-        FLAG_1_SIZE("--analyse", &analyseNoteDurations, INPUT_TYPE_SWITCH, "get set of songInfo from midi file"),
+        FLAG_1_SIZE("--upbeatRest", &upbeatRestDur, INPUT_TYPE_FLOAT, "define upbeat rest duration"),
+        FLAG_1_SIZE("--percision", &percisionLevel, INPUT_TYPE_UINT8_T, "set percision for note durations"),
         FLAG_1_SIZE("-c", &correctionFilePath, INPUT_TYPE_STR, "define note duration file correction\n\
                 first you need to use flag \"--durations\" and then edit generated file so the correct duration will be on the same line seperated by \",\" eg: \"1.422000,1.5\""),
+        FLAG_1_SIZE("--durations", &printSongsNoteDurations, INPUT_TYPE_SWITCH, "get set of note durations from midi file"),
         FLAG_1_SIZE("--notes", &showNotes, INPUT_TYPE_SWITCH, "show duration of notes"),
     },
 };
@@ -60,11 +62,16 @@ int main(int argc, char **argv){
         printHelpMessage(inputParser);
         return 0;
     }
+    
+    // TODO: max percisionLevel is 10 ^ 9 so it would fit in uint32_t and float has limited number of fraction
+    uint32_t percision = pow(10, percisionLevel);
 
-    size_t noteDurationsSize = 0;
-    struct NoteDuration *noteDurations = generateNotes(percision, &noteDurationsSize);
+    size_t validNotesSize = 0;
+    struct Sheet sheet;
+    struct NoteDuration *validNotes = generateValidNotes(percision, &sheet.validNotesSize);
+    sheet.validNotes = validNotes;
     if(showNotes){
-        printNoteDurations(noteDurations, noteDurationsSize);
+        validNotesPrint(validNotes, sheet.validNotesSize);
         return 0;
     }
 
@@ -74,18 +81,18 @@ int main(int argc, char **argv){
     }
 
     struct Song *song = midiParser(midiFilePath);
-    struct SongInfo songInfo = {percision, 0, upbeatDur, NULL, 0};
-    analyse(song, &songInfo);
-    if(analyseNoteDurations){
-        printAnalysis(songInfo);
+    struct SongInfo songInfo = {percision, upbeatDur,upbeatRestDur, NULL, 0};
+    songsNoteDurations(song, &songInfo, &sheet, printSongsNoteDurations);
+
+    if(printSongsNoteDurations){
         return 0;
     }
     
     if(correctionFilePath){
-        correctDurations(correctionFilePath, &songInfo);
+        correctDurations(correctionFilePath, &songInfo, &sheet);
     }
-    
-    generateMeasure(song, songInfo);
+
+    generateMeasure(song, &songInfo, &sheet);
     generateSheet(song, songInfo);
 
     // return 0;
@@ -98,6 +105,5 @@ int main(int argc, char **argv){
     playSong(song, midiDevice, noteMask);
     // learnSong(song, TUTORIAL, trackMask, noteMask);
     pianoExit();
-    // midiParser("./build/twinkle.mid");
     return 0;
 }

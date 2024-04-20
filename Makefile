@@ -22,10 +22,22 @@ main: $(OBJECTS)
 	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o ./build/$@
 
 # flags = -m /home/mario/Documents/Notes/houseOfWolves.mid
+# flags = -m /home/mario/Documents/Notes/Life_Eternal__Ghost_Piano_advanced.mid --upbeat 2 
+# flags = -m /home/mario/Documents/Notes/houseOfWolves.mid --percision 5 --analyse
 # flags = -m /home/mario/Documents/Notes/The_World_-_Death_Note.mscz.mid
+# flags = -m /home/mario/Documents/Notes/aineKleine.mid
+# flags = -m /home/mario/Documents/Notes/aineKleine.mid
+# flags = -m /home/mario/Documents/Notes/Beggin.mid
 # flags = -m /home/mario/Documents/Notes/Gossip.mid
-flags = -m /home/mario/Documents/Notes/famousLastWords.mid
+# flags = -m /home/mario/Documents/Notes/famousLastWords.mid
+# flags = -m /home/mario/Documents/Notes/Fantaisie-Impromptu_in_C_Minor__Chopin.mid
+# flags = -m /home/mario/Documents/Notes/Pirates_of_The_Caribbean_Medley.mid
+# flags = -m /home/mario/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mid --percision 5 --analyse
+flags = -m /home/mario/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mid
 # flags = --help
+# flags += --durations
+# flags += --upbeat 1 -c preludeCF.txt
+# flags += --percision 4
 
 run: main
 	./build/main $(flags)

@@ -6,9 +6,12 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include <stdbool.h>
 
 #include "singlyLinkedList.h"
 #include "vector.h"
+
+#include "notes.h"
 
 #define HEX_VALUE   "%02x"
 
@@ -51,6 +54,8 @@
 #define META_TIME_SIGNATURE_SIZE    4
 #define META_KEY_SIGNATURE          0x59
 #define META_KEY_SIGNATURE_SIZE     2
+#define META_KEY_END_OF_TRACK       0x2f
+#define META_KEY_END_OF_TRACK_SIZE  0
 
 #define CHECK_META_DATA_SIZE(M_SIZE) do{ \
     if(metaDataLength != M_SIZE){ \
@@ -66,87 +71,27 @@ static char noteNames[NUMBER_OF_NOTES][3] = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "H"
 };
 
-#define MAX_TRACK_SIZE 8
-
-struct Chunk{
-    uint8_t name[4];
-    uint32_t size;
-    uint8_t *data;
-};
-
-struct Note{
-    uint8_t type;
-    float start, duration;
-    uint8_t trackIndex;
-};
-
-struct NotesPressGroup{
-    struct Note **notes;
-    uint8_t size;
-    float timer, timerEnd;
-    uint32_t BMP;
-};
+#define BMP_UNSET           UINT32_MAX
+#define NUMERATOR_UNSER     UINT8_MAX
+#define DENOMINATOR         UINT8_MAX
 
 struct TrackInfo{
     uint8_t minNote, maxNote;
     uint8_t n, d, c, b;
 };
 
-// struct Song
-// holds an array of all notes
-// holds an array of measures
-struct Song{
-    struct Measure *measures;
-    size_t measureSize;
-    struct NotesPressGroup **notesArray;
-    size_t notesArraySize;
-    struct TrackInfo *tracksInfo[MAX_TRACK_SIZE];
-    uint8_t trackSize;
-};
-
-// struct measure:
-// start index will point to the fisrt note in the song notes array
-// will have an table of size n that will map 
-// n is calculated with (measure duration/min duration)
-struct Measure{
-    size_t index;
-    struct NotePressGroup **tracks;
-    size_t trackSize;
-    uint32_t PPQ;
-};
-
-struct NoteInfo{
-    float correctDuration;
-    float firstTimerValue;
-    size_t count;
-};
-
-struct SongInfo{
-    int percision;
-    float max;
-    float upbeat;
-    struct NoteInfo *noteInfo;
-    size_t noteInfoSize;
-};
-
 struct Song *midiParser(const char *filePath);
 
-struct Chunk *chunkInit();
-struct Note *noteInit(uint8_t type, float start, float duration, uint8_t trackMask);
+struct NotePressGroup *noteInit(uint8_t type, float start, float duration, uint8_t trackMask);
 
 uint32_t variableLengthValue(uint8_t *data, uint32_t *endOffset);
 void calculateNoteDurations();
 double getClosestNote(double);
 
-void addEvent(struct Note *notes, struct List *list, uint8_t velocity, uint32_t delta, uint32_t PPQ);
+void addEvent(struct NotePressGroup *notes, struct List *list, uint8_t velocity, uint32_t delta, uint32_t PPQ);
 
-struct List *parseTrack(uint8_t *data, uint32_t size, uint32_t PPQ, uint8_t trackIndex, struct TrackInfo **returnTrackInfo);
+struct List *parseTrack(uint8_t *data, uint32_t dataSize, uint32_t PPQ, uint8_t trackIndex, struct TrackInfo **returnTrackInfo);
 
 struct Song *generateSong();
-
-void analyse(struct Song *song, struct SongInfo *songInfo);
-void printAnalysis(struct SongInfo songInfo);
-
-void printSongInfo(struct SongInfo songInfo);
 
 #endif

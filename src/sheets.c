@@ -12,9 +12,11 @@
 //         NTH_BYTE(n, 1),\
 //         NTH_BYTE(n, 0)) 
 
+VECTOR_TYPE_FUNCTIONS(struct NoteDuration, NoteDurationVector, "");
+
 void format8(uint8_t n, char *buffer){
     uint8_t i = 0;
-    for(int i = 0; i < 8; i++){
+    for(i = 0; i < 8; i++){
         buffer[i] = '0';
     }
 
@@ -26,21 +28,22 @@ void format8(uint8_t n, char *buffer){
     buffer[8] = 0;
 }
 
-void printNoteDurations(struct NoteDuration *noteDurations, size_t size){
-    for(size_t i = 0; i < size; i++){
-        if(noteDurations[i].duration){
-            char buffer[10];
-            format8(noteDurations[i].flags, buffer);
-            // format8(0b1, buffer);
-            printf("%f %i %s\n", noteDurations[i].duration, noteDurations[i].note, buffer);
-        }
-    }
+char *noteTypes[] = {
+    "FULL",
+    "HALF",
+    "DOT",
+    "TRIPLET"
+};
+
+int noteDurationComp(const void *a, const void *b){
+    const int x = (*(struct NoteDuration*)a).duration;
+    const int y = (*(struct NoteDuration*)b).duration;
+    
+    return (y < x) - (x < y);
 }
 
-struct NoteDuration *generateNotes(int percision, size_t *rSize){
-    size_t size = ((8 * 1.5 + 1) * percision);
-    *rSize = size;
-    struct NoteDuration *table = calloc(size, sizeof(struct NoteDuration));
+struct NoteDuration *generateValidNotes(uint32_t percision, size_t *rSize){
+    struct NoteDurationVector *durationsVector = NoteDurationVectorInit();
 
     for(uint8_t t = 0; t < 4; t++){
         for(uint8_t i = 0; i < NOTES_TYPE_COUNT; i++){
@@ -50,19 +53,84 @@ struct NoteDuration *generateNotes(int percision, size_t *rSize){
             double triplet = (full * 2) / 3;
 
             double arr[] = {full, half, dot, triplet};
+            float dur = arr[t];
+            float duration = NOTE_DURATION(dur, percision);
 
-            float duration = arr[t];
-            int hash = (duration * (float)percision);
-            if(!table[hash].duration){
-                table[hash] = (struct NoteDuration){duration, i, 1 << t};
+            struct NoteDuration *target = NULL;
+            for(size_t j = 0; j < durationsVector->size; j++){
+                if(durationsVector->data[j].duration == duration){
+                    target = &durationsVector->data[j];
+                    break;
+                }
+            }
+
+            if(target == NULL){
+                NoteDurationVectorPush(durationsVector, (struct NoteDuration){0, duration, i, 1 << t});
             }
         }
     }
 
-    return table;
+    struct NoteDuration *durationsTable = NoteDurationVectorDuplicate(durationsVector, rSize);
+    NoteDurationVectorFree(durationsVector);
+
+    qsort(durationsTable, *rSize, sizeof(struct NoteDuration), noteDurationComp);
+
+    return durationsTable;
 }
 
-void correctDurations(char *correctionFilePath, struct SongInfo *songInfo){
+void validNotesPrint(struct NoteDuration *noteDurations, size_t size){
+    for(size_t i = 0; i < size; i++){
+        if(noteDurations[i].duration){
+            char buffer[10];
+            format8(noteDurations[i].flags, buffer);
+            // format8(0b1, buffer);
+            printf("// %s\n", noteTypes[noteDurations[i].noteType]);
+            printf("%f %i %s\n", noteDurations[i].duration, noteDurations[i].noteType, buffer);
+        }
+    }
+}
+
+// TODO: use hashset or ordered set for faster search
+void songsNoteDurations(struct Song *song, struct SongInfo *songInfo, struct Sheet *sheet, bool debug){
+    struct NoteDurationVector *diffDurations = NoteDurationVectorInit();
+
+    for(size_t i = 0; i < song->notesArraySize; i++){
+        struct NotesPressGroup *n = song->notesArray[i];
+        for(size_t j = 0; j < n->size; j++){
+            struct NotePressGroup *note = n->notes[j];
+            float duration = NOTE_DURATION(note->duration, songInfo->percision);
+
+            struct NoteDuration *target = NULL;
+            for(size_t j = 0; j < diffDurations->size; j++){
+                if(diffDurations->data[j].duration == duration){
+                    target = &diffDurations->data[j];
+                    break;
+                }
+            }
+
+            if(target == NULL){
+                if(debug){
+                    printf("// timer %f\n", n->timer);
+                    printf("%f,\n", duration);
+                }
+                struct NoteDuration nI = {duration, 0, n->timer, 0};
+                NoteDurationVectorPush(diffDurations, nI);
+            }
+        }
+    }
+    // printf("number of durations %zu\n", diffDurations->size);
+
+    size_t durationsSize = 0;
+    struct NoteDuration *durations = NoteDurationVectorDuplicate(diffDurations, &durationsSize);
+    NoteDurationVectorFree(diffDurations);
+
+    qsort(durations, durationsSize, sizeof(struct NoteDuration), noteDurationComp);
+
+    sheet->songNotes = durations;
+    sheet->songNotesSize = durationsSize;
+}
+
+void correctDurations(char *correctionFilePath, struct SongInfo *songInfo, struct Sheet *sheet){
     FILE *file = fopen(correctionFilePath, "r");
     if(!file){
         fprintf(stderr, "failed to open correction file \"%s\"\n", correctionFilePath);
@@ -91,99 +159,128 @@ void correctDurations(char *correctionFilePath, struct SongInfo *songInfo){
 
         float dur1, dur2;
         if(sscanf(line, "%f,%f", &dur1, &dur2) == 2){
-            int hash = (dur1 * (float)songInfo->percision);
-            songInfo->noteInfo[hash].correctDuration = dur2;
-            // printf("%f corrected to %f\n", dur1, dur2);
+            struct NoteDuration *target = NULL;
+            for(size_t i = 0; i < sheet->songNotesSize; i++){
+                if(dur1 == sheet->songNotes[i].duration){
+                    target = &sheet->songNotes[i];
+                }
+            }
+            if(!target){
+                fprintf(stderr, "no matched fouond for duration %f, make sure to use same percision\n", dur1);
+                exit(1);
+            }
+
+            float error = FLT_MAX;
+            struct NoteDuration *correctNote = NULL;
+            for(size_t i = 0; i < sheet->validNotesSize; i++){
+                float e = sheet->validNotes[i].correctDuration - target->duration;
+                if(e < error){
+                    e = error;
+                    correctNote = &sheet->validNotes[i];
+                }
+            }
+            
+            target->correctDuration = correctNote->correctDuration;
+            target->noteType = correctNote->noteType;
+            target->flags = correctNote->flags;
+
+            printf("%f corrected to %f\n", dur1, dur2);
         }
-        // else{
-        //     printf("%f doesn't have correct value\n", dur1);
-        // }
+        else{
+            printf("%f doesn't have a value\n", dur1);
+        }
         // printf("%i %s", i++, line);
     }
 }
 
-void flushMeasure(struct Measure *m, uint8_t trackSize, struct Note **stack, size_t *stackSize, size_t *eachTrackNoteCount){
+void flushMeasure(struct MeasureVector *m, uint8_t trackSize, struct NoteVector *stack, size_t *eachTrackNoteCount, struct NotesPressGroup *npg){
     // printf("measure has %zu notes\n", *stackSize);
     size_t eachTrackNoteIndex[MAX_TRACK_SIZE] = {};
 
-    // allocate for eatch track the count of notes that it will have
     // printf("track size %i\n", trackSize);
-    struct NotesPressGroup **tracks = malloc(sizeof(struct NotesPressGroup*) * trackSize);
+    struct Measure measure = {};
+    
+    measure.numerator = npg->numerator;
+    measure.denominator = npg->denominator;
+    measure.BPM = npg->BPM;
+
+    measure.tracks = malloc(sizeof(struct Note*) * trackSize);
+    measure.trackSize = trackSize;
+
     for(uint8_t i = 0; i < trackSize; i++){
-        // printf("track %i size: %zu\n", i, eachTrackNoteCount[i]);
-        tracks[i] = malloc(sizeof(struct NotesPressGroup) * eachTrackNoteCount[i]);
+        struct Note *track = malloc(sizeof(struct Note) * eachTrackNoteCount[i]);
+        measure.tracks[i] = track;
         eachTrackNoteCount[i] = 0;
     }
 
-    while(*stackSize){
-        struct NotesPressGroup *note = stack[--*stackSize];
-        // size_t trackIndex = note->trackIndex;
-        // size_t trackWIndex = eachTrackNoteIndex[trackIndex]++;
-        // // printf("%p %zu %zu\n", note, trackIndex, trackWIndex);
-        // tracks[trackIndex] = note;
+    for(size_t i = 0; i < stack->size; i++){
+        struct Note note = stack->data[i];
+        measure.tracks[note.trackIndex][eachTrackNoteIndex[note.trackIndex]++] = note;
     }
+    stack->size = 0;
 
-    m->tracks = tracks;
-    m->trackSize = trackSize;
+    MeasureVectorPush(m, measure);
 }
 
-void addToMeasure(struct NotesPressGroup *npg, struct Note **stack, size_t *stackSize, size_t *eachTrackNoteCount){
-    // printf("adding: ");
-    for(size_t j = 0; j < npg->size; j++){
-        struct Note *note = npg->notes[j];
-        eachTrackNoteCount[note->trackIndex]++;
-        // printf("%s, ", noteNames[note->type % 12]);
-        stack[(*stackSize)++] = note;
+struct Note toNote(struct SongInfo *songInfo, struct Sheet *sheet, struct NotePressGroup *notePressGroup){
+    struct Note note = {notePressGroup->type, notePressGroup->trackIndex, NULL};
+    
+    float duration = NOTE_DURATION(notePressGroup->duration, songInfo->percision);
+    for(size_t i = 0; i < sheet->songNotesSize; i++){
+        if(duration == sheet->songNotes[i].correctDuration){
+            note.duration = &sheet->songNotes[i];
+        }
     }
-    // printf("\n");
+
+    return note;
 }
 
-void generateMeasure(struct Song *song, struct SongInfo songInfo){
-    struct NotesPressGroup *last = song->notesArray[song->notesArraySize - 1];
-    // TODO: song can have different time signatures
-    size_t measureSize = (last->timerEnd - songInfo.upbeat) / 4 + (songInfo.upbeat != 0);
+float measureEnd(struct NotesPressGroup *npg){
+    uint8_t n = npg->numerator;
+    // uint8_t d = npg->denominator;
+    
+    // TODO: correct measure calculation
+    float duration = n;
+    return npg->timer + duration;
+}
+
+void generateMeasure(struct Song *song, struct SongInfo *songInfo, struct Sheet *sheet){
     // printf("lastTimer %zu\n", measureSize);
     // printf("songInfo, %i %f\n", song->trackSize, songInfo.upbeat);
-    struct Measure *measures = malloc(sizeof(struct Measure) * measureSize);
-    size_t measureIndex = 0;
+    struct MeasureVector *measureVector = MeasureVectorInit();
     
     size_t eachTrackNoteCount[MAX_TRACK_SIZE] = {};
 
-    // TODO: ensure the stack never overflows
-    // for now we have demisemiquater as the minimum and max MAX_TRACK_SIZE
-    const size_t maxStackSize = MIN_NOTE_COUNT * MAX_TRACK_SIZE;
-    struct Note *stack[maxStackSize];
-    size_t stackSize = 0; 
+    struct NoteVector *stack = NoteVectorInit();
 
-    // create upbeat
-    size_t i = 0;
-    if(songInfo.upbeat != 0){
-        // printf("upbeat set %f\n", songInfo.upbeat);
-        for(; i < song->notesArraySize;){
-            if(songInfo.upbeat <= song->notesArray[i]->timer){
-                flushMeasure(&measures[measureIndex], song->trackSize, stack, &stackSize, eachTrackNoteCount);
-                measureIndex++;
-                break;
-            }
-            else{
-                struct NotesPressGroup *npg = song->notesArray[i];
-                addToMeasure(npg, stack, &stackSize, eachTrackNoteCount);
-            }
-            i++;
-        }
+    float end = measureEnd(song->notesArray[0]);
+
+    if(songInfo->upbeat != 0){
+        end = songInfo->upbeat;
     }
 
-    size_t currMeasureIndex = 0;
-    for(;i < song->notesArraySize;){
-        if((currMeasureIndex + 1) * 4 <= song->notesArray[i]->timer - songInfo.upbeat){
-            // printf("measure ends on timer %f\n", song->notesArray[i]->timer);
-            flushMeasure(&measures[measureIndex++], song->trackSize, stack, &stackSize, eachTrackNoteCount);
-            currMeasureIndex++;
-        }
-        else{
+    size_t i = 0;
+    while(i < song->notesArraySize){
+        if(end < song->notesArray[i]->timer){
             struct NotesPressGroup *npg = song->notesArray[i];
-            addToMeasure(npg, stack, &stackSize, eachTrackNoteCount);
-            i++;
+            // add notes to measure
+            for(size_t j = 0; j < npg->size; j++){
+                struct NotePressGroup *note = npg->notes[j];
+                eachTrackNoteCount[note->trackIndex]++;
+                struct Note n = toNote(songInfo, sheet, note);
+                NoteVectorPush(stack, n);
+            }
+        }
+
+        i++;
+
+        if(i == song->notesArraySize || end <= song->notesArray[i]->timer){
+            flushMeasure(measureVector, song->trackSize, stack, eachTrackNoteCount, song->notesArray[i - 1]);
+            printf("measure %zu end %f\n", measureVector->size, end);
+            if(i < song->notesArraySize){
+                struct NotesPressGroup *npg = song->notesArray[i];
+                end = measureEnd(npg);
+            }
         }
     }
 }

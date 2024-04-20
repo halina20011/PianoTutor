@@ -25,7 +25,7 @@ struct InputParser{
     int flagsOffset;
     int flagsColSize;
     size_t inputsSize;
-    struct Input inputs[10];
+    struct Input inputs[20];
 };
 
 enum{
@@ -33,15 +33,16 @@ enum{
     INPUT_TYPE_SWITCH,
     INPUT_TYPE_STR,
     INPUT_TYPE_INT,
+    INPUT_TYPE_UINT8_T,
     INPUT_TYPE_FLOAT,
 };
 
 #define SIZEOF_ARGS(TYPE, ...) (sizeof((TYPE[]){__VA_ARGS__})/sizeof(TYPE))
 
-#define FLAG_1_SIZE(FLAG1, VAR, TYPE, MESSAGE) {MESSAGE, VAR, TYPE, 1, {FLAG1}}
-#define FLAG_2_SIZE(FLAG1, FLAG2, VAR, TYPE, MESSAGE) {MESSAGE, VAR, TYPE, 2, {FLAG1, FLAG2}}
-#define FLAG_3_SIZE(FLAG1, FLAG2, FLAG3, VAR,  TYPE, MESSAGE) {MESSAGE, VAR, TYPE, 3, {FLAG1, FLAG2, FLAG3}}
-#define FLAG_4_SIZE(FLAG1, FLAG2, FLAG3, FLAG4, VAR, TYPE, MESSAGE) {MESSAGE, VAR, TYPE, 4, {FLAG1, FLAG2, FLAG3, FLAG4}}
+#define FLAG_1_SIZE(FLAG1, VAR, TYPE, MESSAGE) (struct Input){MESSAGE, VAR, TYPE, 1, {FLAG1}}
+#define FLAG_2_SIZE(FLAG1, FLAG2, VAR, TYPE, MESSAGE) (struct Input){MESSAGE, VAR, TYPE, 2, {FLAG1, FLAG2}}
+#define FLAG_3_SIZE(FLAG1, FLAG2, FLAG3, VAR,  TYPE, MESSAGE) (struct Input){MESSAGE, VAR, TYPE, 3, {FLAG1, FLAG2, FLAG3}}
+#define FLAG_4_SIZE(FLAG1, FLAG2, FLAG3, FLAG4, VAR, TYPE, MESSAGE) (struct Input){MESSAGE, VAR, TYPE, 4, {FLAG1, FLAG2, FLAG3, FLAG4}}
 
 #define NEW_ARGUMENT(MESSAGE, TYPE, ...) {MESSAGE, VAR\
     TYPE,\

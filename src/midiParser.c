@@ -1,5 +1,4 @@
 #include "midiParser.h"
-#include <stdlib.h>
 
 uint8_t size1[SIZE_OF_SIZE1] = {
     EVENT_PROGRAM_CHANGE, 
@@ -91,8 +90,8 @@ void printData(char *data, size_t s){
 //     return index;
 // }
 
-struct Note *noteInit(uint8_t type, float start, float duration, uint8_t trackIndex){
-    struct Note *note = malloc(sizeof(struct Note));
+struct NotePressGroup *noteInit(uint8_t type, float start, float duration, uint8_t trackIndex){
+    struct NotePressGroup *note = malloc(sizeof(struct NotePressGroup));
     note->type = type;
     note->start = start;
     note->duration = duration;
@@ -102,11 +101,11 @@ struct Note *noteInit(uint8_t type, float start, float duration, uint8_t trackIn
     return note;
 }
 
-struct NotesPressGroup *notesPressGroupInit(struct Note **n, size_t size, float timer, uint32_t BPM){
+struct NotesPressGroup *notesPressGroupInit(struct NotePressGroup **n, size_t size, float timer, uint32_t BPM, uint8_t numerator, uint8_t denominator){
     struct NotesPressGroup *npg = malloc(sizeof(struct NotesPressGroup));
     
-    size_t bufferSize = sizeof(struct Note) * size;
-    struct Note **note = malloc(bufferSize);
+    size_t bufferSize = sizeof(struct NotePressGroup) * size;
+    struct NotePressGroup **note = malloc(bufferSize);
     // float maxDuration = 0;
     // for(uint8_t i = 0; i < size; i++){
     //     if(maxDuration < n[i]->duration){
@@ -119,7 +118,10 @@ struct NotesPressGroup *notesPressGroupInit(struct Note **n, size_t size, float 
     npg->notes = note;
     npg->size = size;
     npg->timer = timer;
-    npg->BMP = BPM;
+
+    npg->BPM = BPM;
+    npg->numerator = numerator;
+    npg->denominator = denominator;
 
     return npg;
 }
@@ -148,18 +150,18 @@ struct NotesPressGroup *notesPressGroupInit(struct Note **n, size_t size, float 
 
 // create a singly linked list for the sequence of notes
 // they are grooped by the time when they are pressed
-struct List *parseTrack(uint8_t *data, uint32_t size, uint32_t PPQ, uint8_t trackIndex, struct TrackInfo **returnTrackInfo){
+struct List *parseTrack(uint8_t *data, uint32_t dataSize, uint32_t PPQ, uint8_t trackIndex, struct TrackInfo **returnTrackInfo){
     uint32_t dataIndex = 0;
     uint8_t prevStatus = 0;
     uint8_t n = 4, d = 4, c = 24, b = 8;
     
     uint32_t timer = 0;
-    // s_n = 6000000 / (BMP * PPQ)
-    uint32_t BPM = UINT32_MAX;
+    uint32_t BPM = BMP_UNSET;
+    // s_n = 6000000 / (BPM * PPQ)
 
-    struct Note *noteTable[NOTE_BUFFER_SIZE];
+    struct NotePressGroup *noteTable[NOTE_BUFFER_SIZE];
 
-    struct Note *notesMagazine[NOTE_BUFFER_SIZE];
+    struct NotePressGroup *notesMagazine[NOTE_BUFFER_SIZE];
     size_t notesMagazineSize = 0;
 
     struct List *notesPressGroupsList = newSinglyLinkedList();
@@ -170,7 +172,7 @@ struct List *parseTrack(uint8_t *data, uint32_t size, uint32_t PPQ, uint8_t trac
     trackInfo->maxNote = 0;
 
      // uint32_t prevDelta = 0;
-    while(dataIndex < size){
+    while(dataIndex < dataSize){
         uint32_t deltaTime = variableLengthValue(data + dataIndex, &dataIndex);
         // if(deltaTime != 0){
         //     printf("deltaTime %u\n", deltaTime);
@@ -194,23 +196,24 @@ struct List *parseTrack(uint8_t *data, uint32_t size, uint32_t PPQ, uint8_t trac
             else if(metaType == META_PREFIX_PORT){
                 printf("meta prefix port %i\n", 0);
             }
-            else if(metaType  == META_MIDI_PORT){
+            else if(metaType == META_MIDI_PORT){
                 printf("using midi port: %i\n", 0);
             }
             else if(metaType == META_SET_TEMPO){
                 CHECK_META_DATA_SIZE(META_SET_TEMPO_SIZE);
                 // in microsecconds per quater note
                 uint32_t t = BUFFER_TO_24(dataBuffer);
-                BPM = 60 * 1000000 / t;
+                BPM = (double)(60 * 1000000) / (double)t;
                 printf("new BPM: %u\n", BPM);
             }
             else if(metaType == META_TIME_SIGNATURE){
                 CHECK_META_DATA_SIZE(META_TIME_SIGNATURE_SIZE);
                 n = dataBuffer[0]; // number of beats per measure
-                d = dataBuffer[1]; // represents beat units as power of 2
+                d = 1 << dataBuffer[1]; // represents beat units as power of 2
                 c = dataBuffer[2]; // midi clocks per metronome click
                 b = dataBuffer[3]; // number of 32nd note in 4nd note
-                // printf("%u/%u c:%u b:%u\n", n, d, c, b);
+                float fTimer = (float)timer / (float)PPQ;
+                printf("%f %u/%u c:%u b:%u\n", fTimer, n, d, c, b);
                 // calculateNoteDurations()
             }
             else if(metaType == META_KEY_SIGNATURE){
@@ -218,6 +221,9 @@ struct List *parseTrack(uint8_t *data, uint32_t size, uint32_t PPQ, uint8_t trac
                 uint8_t sf = dataBuffer[0];
                 uint8_t mi = dataBuffer[1];
                 printf("meta key signature: %i %i\n", sf, mi);
+            }
+            else if(metaType == META_KEY_END_OF_TRACK){
+                printf("end of track\n");
             }
             else{
                 printf("not found meta type %02X\n", metaType);
@@ -266,8 +272,8 @@ struct List *parseTrack(uint8_t *data, uint32_t size, uint32_t PPQ, uint8_t trac
                         trackInfo->maxNote = noteType;
                     }
 
-                    float timer = (float)notesMagazine[0]->start / (float)PPQ;
-                    struct NotesPressGroup *notesPressGroup = notesPressGroupInit(notesMagazine, notesMagazineSize, timer, BPM);
+                    float notesTimer = (float)notesMagazine[0]->start / (float)PPQ;
+                    struct NotesPressGroup *notesPressGroup = notesPressGroupInit(notesMagazine, notesMagazineSize, notesTimer, BPM, n, d);
                     notesMagazineSize = 0;
                     listInsert(notesPressGroupsList, notesPressGroup);
                 }
@@ -275,11 +281,11 @@ struct List *parseTrack(uint8_t *data, uint32_t size, uint32_t PPQ, uint8_t trac
                 // printf("note[%i] %i %s vel: %i ch %i\n", noteType, octave, noteNames[noteName], velocity, chanel);
 
                 if(messageType == EVENT_NOTE_OFF){
-                    struct Note *note = noteTable[noteType];
-                    note->duration = (timer - note->start) / PPQ;
+                    struct NotePressGroup *note = noteTable[noteType];
+                    note->duration = (timer - note->start) / (float)PPQ;
                 }
                 else{
-                    struct Note *note = noteInit(noteType, timer, -1, trackIndex);
+                    struct NotePressGroup *note = noteInit(noteType, timer, -1, trackIndex);
                     noteTable[noteType] = note;
 
                     notesMagazine[notesMagazineSize++] = note;
@@ -351,10 +357,11 @@ struct NotesPressGroup **mergeTracks(struct List **tracks, size_t tracksSize, si
         size_t tracksStack[MAX_TRACK_SIZE];
         size_t sameSize = 0;
         size_t mergedNotesSize = 0;
+        uint32_t BMP = BMP_UNSET;
         for(size_t i = 0; i < tracksSize; i++){
             if(currs[i]){
-                struct NotesPressGroup *n = currs[i]->val;
-                float timer = n->timer;
+                struct NotesPressGroup *npg = currs[i]->val;
+                float timer = npg->timer;
                 if(maxVal < timer){
                     minIndex = i;
                     maxVal = timer;
@@ -363,7 +370,10 @@ struct NotesPressGroup **mergeTracks(struct List **tracks, size_t tracksSize, si
                 }
                 if(timer == maxVal){
                     tracksStack[sameSize++] = i;
-                    mergedNotesSize += n->size;
+                    mergedNotesSize += npg->size;
+                    if(BMP == BMP_UNSET && npg->BPM != BMP_UNSET){
+                        BMP = npg->BPM;
+                    }
                 }
             }
         }
@@ -372,24 +382,17 @@ struct NotesPressGroup **mergeTracks(struct List **tracks, size_t tracksSize, si
             break;
         }
         
-        for(size_t i = 0; i < tracksSize; i++){
-            if(currs[i]){
-                struct NotesPressGroup *n = currs[i]->val;
-                float timer = n->timer;
-                if(timer == maxVal){
-                }
-            }
-        }
-        
         // if there are more NotesPressGroups then merged them together
         struct NotesPressGroup *curr = currs[minIndex]->val;
+        curr->BPM = BMP;
+        // printf("BMP: %i\n", BMP);
         if(1 < sameSize){
-            struct Note **mergedNotes = malloc(sizeof(struct Note) * mergedNotesSize);
+            struct NotePressGroup **mergedNotes = malloc(sizeof(struct NotePressGroup) * mergedNotesSize);
             size_t noteIndex = 0;
             for(size_t i = 0; i < sameSize; i++){
                 minIndex = tracksStack[i];
                 struct NotesPressGroup *notes = currs[minIndex]->val;
-                struct Note **note = notes->notes;
+                struct NotePressGroup **note = notes->notes;
                 for(size_t n = 0; n < notes->size; n++){
                     mergedNotes[noteIndex++] = note[n];
                 }
@@ -424,7 +427,7 @@ struct NotesPressGroup **mergeTracks(struct List **tracks, size_t tracksSize, si
     }
 
     // for(size_t i = 0; i < size; i++){
-    //     struct Note **nn = allNotes[i]->notes;
+    //     struct NotePressGroup **nn = allNotes[i]->notes;
     //     printf("%zu %f => ", i, allNotes[i]->timer);
     //     for(size_t j = 0; j < allNotes[i]->size; j++){
     //         printf("%s ", noteNames[nn[j]->type %12]);
@@ -443,11 +446,41 @@ void songPrint(struct Song *song){
         struct NotesPressGroup *n = song->notesArray[i];
         printf("measure[%zu] timer: %f\n", i, n->timer);
         for(size_t j = 0; j < n->size; j++){
-            struct Note *note = n->notes[j];
+            struct NotePressGroup *note = n->notes[j];
             printf("%f ", note->duration);
         }
         printf("\n");
     }
+}
+
+void printTrack(struct List *track){
+    struct Node *n = track->head;
+    while(n){
+        struct NotesPressGroup *npg = n->val;
+        printf("timer: %f\n", npg->timer);
+
+        for(size_t s = 0; s < npg->size; s++){
+            struct NotePressGroup *note = npg->notes[s];
+            if(note->duration < 0.0001){
+                printf("exit\n");
+                return;
+            }
+            printf("%s %f\n", noteNames[note->type % 12], note->duration);
+        }
+        // printf("\n");
+
+        n = n->next;
+    }
+}
+
+void printTracks(struct List **tracks, size_t size){
+    for(size_t i = 0; i < size; i++){
+        printTrack(tracks[i]);
+    }
+}
+
+void makeTable(uint32_t ){
+
 }
 
 struct Song *midiParser(const char *filePath){
@@ -465,15 +498,16 @@ struct Song *midiParser(const char *filePath){
         exit(1);
     }
 
-    char buffer[4];
+    char name[4];
     uint32_t PPQ = 480;
     
     struct List *tracks = newSinglyLinkedList();
     struct Song *song = malloc(sizeof(struct Song));
 
     uint8_t trackIndex = 0;
-    while(fread(buffer, sizeof(char) * 4, 1, file) == 1){
-        char *name = strdup(buffer);
+    // name(4 bytes):size(4 bytes):data(size bytes)
+    while(fread(name, sizeof(char) * 4, 1, file) == 1){
+        char buffer[4];
         fread(buffer, sizeof(uint8_t) * 4, 1, file);
         uint32_t dataSize = BUFFER_TO_32(buffer);
         uint8_t *data = malloc(sizeof(uint8_t) * dataSize);
@@ -493,11 +527,13 @@ struct Song *midiParser(const char *filePath){
             if(bit15 == 0){
                 // PPQ ="ticks per quater note" / "parts per quater"
                 PPQ = division & ~(1 << 15);
-                // printf("%i|%i\n", bit15, ticksPerQuarterNote);
+                printf("PPQ: %i\n", PPQ);
             }
             else{
                 uint8_t second = (division & ((BIT_MASK_7) << 7));
                 uint8_t first = (division & BIT_MASK_7);
+                fprintf(stderr, "SMPTE not implemented\n");
+                exit(1);
                 // printf("%i|%i|%i|\n", bit15, second, first);
             }
         }
@@ -508,6 +544,7 @@ struct Song *midiParser(const char *filePath){
             // printf("track p: %p\n", track);
             listPush(tracks, track);
         }
+        free(data);
     }
     printf("\n");
     song->trackSize = trackIndex;
@@ -523,59 +560,14 @@ struct Song *midiParser(const char *filePath){
         curr = curr->next;
     }
 
+    // printTracks(tracksArray, tSize);
+
     // song->PPQ = PPQ;
     song->notesArray = mergeTracks(tracksArray, tSize, &song->notesArraySize);
 
     // songPrint(song);
 
     return song;
-}
-
-void analyse(struct Song *song, struct SongInfo *songInfo){
-    float max = 0;
-    for(size_t i = 0; i < song->notesArraySize; i++){
-        struct NotesPressGroup *n = song->notesArray[i];
-        for(size_t j = 0; j < n->size; j++){
-            struct Note *note = n->notes[j];
-            if(max < note->duration){
-                max = note->duration;
-            }
-        }
-    }
-
-    // TODO: use better hash map
-    songInfo->max = max;
-    size_t tableSize = (int)(max * (float)songInfo->percision) + 1;
-    struct NoteInfo *table = malloc(sizeof(struct NoteInfo) * tableSize);
-    // printf("tableSize: %zu bytes\n", sizeof(struct NoteInfo) * tableSize);
-
-    for(size_t i = 0; i < song->notesArraySize; i++){
-        struct NotesPressGroup *n = song->notesArray[i];
-        for(size_t j = 0; j < n->size; j++){
-            struct Note *note = n->notes[j];
-            int hash = (note->duration * (float)songInfo->percision);
-            if(!table[hash].count){
-                table[hash].correctDuration = (hash / (float)songInfo->percision);
-                table[hash].firstTimerValue = n->timer;
-                // printf("# time: %f\n", n->timer);
-                // printf("%i %f\n", hash, note->duration);
-            }
-            table[hash].count++;
-        }
-    }
-
-    songInfo->noteInfo = table;
-    songInfo->noteInfoSize = tableSize;
-}
-
-void printAnalysis(struct SongInfo songInfo){
-    for(size_t i = 0; i < songInfo.noteInfoSize; i++){
-        struct NoteInfo noteInfo = songInfo.noteInfo[i];
-        if(noteInfo.count){
-            printf("// count %zu first timer: %f\n", noteInfo.count, noteInfo.firstTimerValue);
-            printf("%f,\n", noteInfo.correctDuration);
-        }
-    }
 }
 
 struct Song *generateSong(){
@@ -586,12 +578,12 @@ struct Song *generateSong(){
     // notes->trackNumber = 0;
     
     uint8_t notations[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
-    struct Note **n = malloc(sizeof(struct Note*) * 127);
+    struct NotePressGroup **n = malloc(sizeof(struct Note*) * 127);
     uint8_t size = 0;
     for(uint8_t i = 0; i < 127; i++){
         uint8_t note = i % 12;
         if(!notations[note]){
-            struct Note *newNote = malloc(sizeof(struct Note));
+            struct NotePressGroup *newNote = malloc(sizeof(struct NotePressGroup));
             newNote->type = i;
             newNote->start = 0;
             newNote->duration = 1.0;
