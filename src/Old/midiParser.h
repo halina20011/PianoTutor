@@ -9,9 +9,9 @@
 #include <stdbool.h>
 
 #include "singlyLinkedList.h"
-#include "vector.h"
+#include "../vector.h"
 
-#include "notes.h"
+#include "midiNotes.h"
 
 #define HEX_VALUE   "%02x"
 
@@ -75,23 +75,21 @@ static char noteNames[NUMBER_OF_NOTES][3] = {
 #define NUMERATOR_UNSER     UINT8_MAX
 #define DENOMINATOR         UINT8_MAX
 
-struct TrackInfo{
+struct MidiTrackInfo{
     uint8_t minNote, maxNote;
     uint8_t n, d, c, b;
 };
 
-struct Song *midiParser(const char *filePath);
-
-struct NotePressGroup *noteInit(uint8_t type, float start, float duration, uint8_t trackMask);
+struct MidiSong *midiParser(const char *filePath);
 
 uint32_t variableLengthValue(uint8_t *data, uint32_t *endOffset);
 void calculateNoteDurations();
 double getClosestNote(double);
 
-void addEvent(struct NotePressGroup *notes, struct List *list, uint8_t velocity, uint32_t delta, uint32_t PPQ);
+void addEvent(struct MidiNotePressGroup *notes, struct List *list, uint8_t velocity, uint32_t delta, uint32_t PPQ);
 
-struct List *parseTrack(uint8_t *data, uint32_t dataSize, uint32_t PPQ, uint8_t trackIndex, struct TrackInfo **returnTrackInfo);
+struct List *parseTrack(uint8_t *data, uint32_t dataSize, uint32_t PPQ, uint8_t trackIndex, struct MidiTrackInfo **returnTrackInfo);
 
-struct Song *generateSong();
+struct MidiSong *generateSong();
 
 #endif

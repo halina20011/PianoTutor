@@ -1,0 +1,264 @@
+#include "xmlParser.h"
+#include <stdlib.h>
+
+// https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/note/
+struct Note *parseNote(xmlNodePtr part, StaffNumber *staveIndex, bool *isChord){
+    struct Note *note = calloc(1, sizeof(struct Note));
+
+    *staveIndex = 0;
+    xmlNodePtr children = part->xmlChildrenNode;
+    while(children){
+        if(xmlStrcmp(children->name, XML_CHAR"rest") == 0){
+            SET_BIT(note->flags, REST_FLAG);
+        }
+        else if(xmlStrcmp(children->name, XML_CHAR"chord") == 0){
+            *isChord = true;
+        }
+        else if(xmlStrcmp(children->name, XML_CHAR"duration") == 0){
+            note->duration = parseBody(children);
+        }
+        else if(xmlStrcmp(children->name, XML_CHAR"type") == 0){
+            note->noteType = parseNoteType(children);
+        }
+        else if(xmlStrcmp(children->name, XML_CHAR"pitch") == 0){
+            parsePitch(children, note);
+        }
+        else if(xmlStrcmp(children->name, XML_CHAR"notations") == 0){
+            parseNotations(children, note);
+        }
+        else if(xmlStrcmp(children->name, XML_CHAR"staff") == 0){
+            *staveIndex = parseBody(children) - 1;
+        }
+        else if(xmlStrcmp(children->name, XML_CHAR"time-modification") == 0){
+            parseTimeModification(children, note);
+        }
+        else if(xmlStrcmp(children->name, XML_CHAR"beam") == 0){
+            parseBeam(children, &note->beams);
+        }
+        children = children->next;
+    }
+
+    // if(GET_BIT(note->flags, REST_FLAG)){
+    //     printf("new rest\n");
+    // }
+    // else{
+    //     printf("new note (%i:%i:%c)\n", note->octave, note->step, note->stepChar);
+    // }
+    
+    return note;
+}
+
+void notesMagazinePrint(struct NoteVectorPVector *notesVectorMagazine){
+    printf("==== magazine ====\n");
+    for(size_t i = 0; i < notesVectorMagazine->size; i++){
+        struct NotePVector *currNoteVector = notesVectorMagazine->data[i];
+        printf("%p [%zu]: ", currNoteVector, currNoteVector->size);
+        for(size_t j = 0; j < currNoteVector->size; j++){
+            printf("%p ", currNoteVector->data[j]);
+        }
+        printf("\n");
+    }
+    printf("===== mag end ====\n");
+}
+
+void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size_t measureNoteSize){
+    // notesMagazinePrint(notesVectorMagazine);
+    for(long i = 0; i < measureNoteSize; i++){
+        // if the magazine is smaller then the buffer or the its empty
+        // then the buffer with this index will be set to NULL
+        if(notesVectorMagazine->size <= i || notesVectorMagazine->data[i]->size == 0){
+            staff[i] = NULL;
+            // fprintf(stderr, "%li 0\n", i);
+        }
+        else if(i < notesVectorMagazine->size && 0 < notesVectorMagazine->data[i]->size){
+            // printf("%i m p %p\n", i, notesVectorMagazine->data[i]);
+            struct NotePVector *notesVector = notesVectorMagazine->data[i];
+            // fprintf(stderr, "%li %zu\n", i, notesVector->size);
+            size_t noteCounter = 0;
+            
+            struct Note *lastNote = NULL;
+            struct Note *lastRest = NULL;
+            for(size_t j = 0; j < notesVector->size; j++){
+                struct Note *note = notesVector->data[j];
+                // fprintf(stderr, "%p\n", note);
+                if(GET_BIT(note->flags, REST_FLAG) == 0){
+                    lastNote = note;
+                    noteCounter++;
+                }
+                else{
+                    lastRest = note;
+                }
+            }
+
+            struct Notes *notes = calloc(1, sizeof(struct Notes));
+
+            if(noteCounter == 0){
+                notes->note = lastRest;
+            }
+            else if(noteCounter == 1){
+                notes->note = lastNote;
+                notes->beams = lastNote->beams;
+            }
+            else{
+                struct Note **chord = malloc(sizeof(struct Note*) * noteCounter);
+
+                for(size_t j = 0; j < notesVector->size; j++){
+                    struct Note *note = notesVector->data[j];
+                    if(GET_BIT(note->flags, REST_FLAG) == 0){
+                        chord[j] = note;
+                    }
+                }
+
+                notes->chord = chord;
+                notes->chordSize = noteCounter;
+                notes->beams = chord[0]->beams;
+            }
+
+            staff[i] = notes;
+
+            // printf("flushed note's beams %i\n", notes->beams);
+
+            notesVector->size = 0;
+        }
+    }
+}
+
+Pitch parseStep(char c){
+    switch(c){
+        case 'A':
+            return 5;
+        case 'B':
+            return 6;
+        case 'C':
+            return 0;
+        case 'D':
+            return 1;
+        case 'E':
+            return 2;
+        case 'F':
+            return 3;
+        case 'G':
+            return 4;
+    }
+
+    return 0;
+}
+
+#define MATCH(str, enum){\
+    if(strcmp(content, str) == 0){\
+        return enum;\
+    }\
+}
+
+// https://www.w3.org/2021/06/musicxml40/musicxml-reference/data-types/note-type-value/
+enum NoteType parseNoteType(xmlNodePtr node){
+    char *content = (char*)xmlNodeGetContent(node);
+
+    MATCH("maxima",    NOTE_TYPE_MAXIMA);
+    MATCH("long",      NOTE_TYPE_LONG);
+    MATCH("breve",     NOTE_TYPE_BREVE);
+    MATCH("whole",     NOTE_TYPE_WHOLE);
+    MATCH("half",      NOTE_TYPE_HALF);
+    MATCH("quarter",   NOTE_TYPE_QUARTER);
+    MATCH("eighth",    NOTE_TYPE_EIGHTH);
+    MATCH("16th",      NOTE_TYPE_16TH);
+    MATCH("32nd",      NOTE_TYPE_32ND);
+    MATCH("64th",      NOTE_TYPE_64TH);
+    MATCH("128th",     NOTE_TYPE_128TH);
+    MATCH("256th",     NOTE_TYPE_256TH);
+    MATCH("512th",     NOTE_TYPE_512TH);
+    MATCH("1024th",    NOTE_TYPE_1024TH);
+
+    fprintf(stderr, "note type '%s', not found\n", content);
+    exit(1);
+}
+
+// https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/pitch/
+void parsePitch(xmlNodePtr node, struct Note *note){
+    xmlNodePtr children = node->xmlChildrenNode;
+    while(children){
+        // https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/step/
+        if(xmlStrcmp(children->name, XML_CHAR"step") == 0){
+            char c = xmlNodeGetContent(children)[0];
+            note->pitch.step = parseStep(c);
+            note->pitch.stepChar = c;
+        }
+        else if(xmlStrcmp(children->name, XML_CHAR"alter") == 0){
+            long alter = parseBody(children);
+            // sharp == 1 #
+            // flat == -1 b
+            if(alter == 1 || alter == -1){
+                SET_BIT(note->flags, IS_ACCIDENTAL_FLAG);
+                if(alter == -1){
+                    SET_BIT(note->flags, IS_FLAT_FLAG);
+                }
+            }
+            else{
+                fprintf(stderr, "alter == %li not implemented\n", alter);
+                exit(1);
+            }
+        }
+        // https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/octave/
+        else if(xmlStrcmp(children->name, XML_CHAR"octave") == 0){
+            note->pitch.octave = parseBody(children);
+            if(note->pitch.octave < 0 || 9 < note->pitch.octave ){
+                fprintf(stderr, "note's octave must be in range <0;9> you have %i\n", note->pitch.octave);
+            }
+        }
+        children = children->next;
+    }
+}
+
+void parseNotations(xmlNodePtr parent, struct Note *note){
+    xmlNodePtr element = parent->xmlChildrenNode;
+    while(element){
+        // https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/tied/
+        if(xmlStrcmp(element->name, XML_CHAR"tied") == 0){
+            SET_BIT(note->flags, TIE_FLAG);
+        }
+        // TODO articulations -> staccato
+        element = element->next;
+    }
+}
+
+// https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/time-modification/
+void parseTimeModification(xmlNodePtr parent, struct Note *note){
+    xmlNodePtr element = parent->xmlChildrenNode;
+    while(element){
+        // https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/actual-notes/
+        if(xmlStrcmp(element->name, XML_CHAR"actual-notes") == 0){
+            note->tuplet = parseBody(element);
+        }
+
+        element = element->next;
+    }
+}
+
+// <beam>
+// https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/beam/
+void parseBeam(xmlNodePtr parent, Beams *rBeams){
+    int number = parseProp(parent, "number");
+    char *body = (char*)xmlNodeGetContent(parent);
+    if(number){
+        number--;
+    }
+    
+    Beam beam = 0;
+    SET_BIT(beam, BEAM_ENABLED);
+
+    if(strcmp(body, "end") == 0){
+        SET_BIT(beam, BEAM_OFF);
+    }
+
+
+    bool fHook = (strcmp(body, "forward hook") == 0);
+    bool bHook = (strcmp(body, "backward hook") == 0);
+    if(fHook || bHook){
+        SET_BIT(beam, BEAM_HOOK_ENABLED);
+        if(bHook){
+            SET_BIT(beam, BEAM_HOOK_BACKWARD);
+        }
+    }
+
+    SET_BEAM(*rBeams, number, beam);
+}

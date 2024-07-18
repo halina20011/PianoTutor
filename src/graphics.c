@@ -1,73 +1,156 @@
 #include "graphics.h"
-// #include "midiDevice.h"
-#include <stdint.h>
+#include "interface.h"
+#include "piano.h"
 
-#include "shader.h"
-#include "shaders.h"
+extern struct Interface *interface;
+extern GLint shaderMatUniform;
+extern GLint modelShaderMatUniform;
 
-float textWidth, textHeight, screenRatio;
-GLuint textureSamplerUniform;
+#define UNPACK3(val) val[0], val[1], val[2]
 
-extern float timer, speed;
-extern bool paused;
-bool run = true;
+#define IGNORE __attribute__ ((unused))
 
-float pianoHeight = 0.5;
+#define MIN(a, b) ((a < b) ? a : b)
+#define MAX(a, b) ((a < b) ? b : a)
 
-GLFWwindow *window;
+void GLAPIENTRY messageCallback(IGNORE GLenum source, IGNORE GLenum type, IGNORE GLuint id, GLenum severity, IGNORE GLsizei length, const GLchar* message, IGNORE const void* userParam){
+    // UNUSEDS(source, id, length, userParam);
+    const char *messageString = (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" );
+    fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n", messageString, type, severity, message );
+}
 
-#define UNUSED(x) (void)(x)
-#define UNUSEDS(...) (void)(__VA_ARGS__)
+float prevMeasureMovement = 0;
+void processPollEvents(){
+    GLFWwindow *window = interface->g->window;
+    if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS){
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+    }
 
-float getFloatColor(uint8_t val){
-    return (float)val / (float)0xff;
+    bool left = glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS;
+    bool right = glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
+
+    if(prevMeasureMovement + 0.2f < glfwGetTime()){
+        size_t currMeasure = interface->piano->currMeasure;
+        if(left){
+            if(currMeasure == 0){
+                currMeasure = interface->piano->measureSize - 1;
+            }
+            else{
+                interface->piano->currMeasure--;
+            }
+            prevMeasureMovement = glfwGetTime();
+        }
+
+        if(right){
+            if(currMeasure == interface->piano->measureSize - 1){
+                currMeasure = 0;
+            }
+            else{
+                interface->piano->currMeasure++;
+            }
+            prevMeasureMovement = glfwGetTime();
+        }
+    }
+    
+    if(!left && !right){
+        prevMeasureMovement = 0;   
+    }
 }
 
 void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
-    UNUSED(w);
-    UNUSED(scancode);
-    UNUSED(mods);
-    if(key == GLFW_KEY_Q || key == GLFW_KEY_ESCAPE){
-        run = false;
+    if(action != GLFW_PRESS){
+        return;
     }
 
-    if(action == GLFW_RELEASE){
-        switch(key){
-            case GLFW_KEY_SPACE:
-                paused = !paused;
-                break;
-            case GLFW_KEY_UP:
-                speed += 0.1;
-                break;
-            case GLFW_KEY_DOWN:
-                speed -= 0.1;
-                break;
-            case GLFW_KEY_RIGHT:
-                timer += 1.0;
-                break;
-            case GLFW_KEY_LEFT:
-                timer -= 1.0;
-                break;
-        }
-    }
+    interface->key = key;
 }
 
 void framebufferSizeCallback(GLFWwindow *w, int width, int height){
-    struct Graphics *g = glfwGetWindowUserPointer(w);
-    g->width = width;
-    g->height = height;
-    g->screenRatio = (float)width / (float)height;
-    printf("%i %i %f\n", width, height, screenRatio);
-    glViewport(0, 0, width, height);
+    interface->width = width;
+    interface->height = height;
+    interface->screenRatio = (float)width / (float)height;
 }
 
-void GLAPIENTRY messageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam){
-    UNUSED(source);
-    UNUSED(id);
-    UNUSED(length);
-    UNUSED(userParam);
-    const char *messageString = (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" );
-    fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n", messageString, type, severity, message );
+void drawLine(float x1, float y1, float z1, float x2, float y2, float z2){
+    float line[] = {
+        x1, y1, z1,
+        x2, y2, z2,
+    };
+    glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
+    glDrawArrays(GL_LINES, 0, 2);
+}
+
+void drawLineWeight(vec3 p1, vec3 p2, vec3 pos, float rotation, GLuint arrayBuffer, GLuint elementArrayBuffer, GLuint modelUniformLocation){
+    // A ------ B
+    // |   |    |
+    // |---+----|
+    // |   |    |
+    // D------- C
+    float s = 0.005;
+    // float s = 0.05;
+    float d = glm_vec3_distance(p1, p2);
+    float points[] = {
+        - s, + s, 0, 0, 0, // A
+        + s, + s, 0, 0, 0, // B
+        + s, - s, 0, 0, 0, // C
+        - s, - s, 0, 0, 0, // D
+        - s, + s, 0 - d, 0, 0, // A2
+        + s, + s, 0 - d, 0, 0, // B2
+        + s, - s, 0 - d, 0, 0, // C2
+        - s, - s, 0 - d, 0, 0, // D2
+    };
+
+    vec3 dir = {};
+    glm_vec3_sub(p2, p1, dir);
+    glm_vec3_normalize(dir);
+
+    mat4 mat;
+    glm_mat4_identity(mat);
+
+    // glm_translate(mat, p1);
+    if(dir[0] == 0 && dir[2] == 0){
+        glm_look(p1, dir, (vec3){1, 0, 0}, mat);
+        // glm_look((vec3){0, 0, 0}, dir, (vec3){1, 0, 0}, mat);
+    }
+    else{
+        // glm_look((vec3){0, 0, 0}, dir, (vec3){0, 1, 0}, mat);
+        glm_look(p1, dir, (vec3){0, 1, 0}, mat);
+    }
+    
+    glm_rotate_at(mat, pos, rotation, (vec3){0, 1, 0});
+    glm_mat4_inv(mat, mat);
+    // glm_translate(mat, pos);
+    // glm_rotate_at(mat, (vec3){0, 0, 0}, rotation, (vec3){0, 1, 0});
+
+    // glm_look(p1, dir, (vec3){0, 1, 0}, mat);
+    // glm_scale(mat, (vec3){d, d, d});
+    // glm_translate(mat, p1);
+
+    glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)mat);
+
+    glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_DYNAMIC_DRAW);
+
+    GLubyte indices[] = {
+        0, 1, 2, // start 
+        0, 2, 3, // 
+        4, 5, 6, // end
+        4, 6, 7,
+        // ------
+        0, 4, 
+        1, 5, 
+        2, 6, 
+        3, 7, 
+        0, 4
+    };
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementArrayBuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
+
+    // glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_BYTE, NULL);
+    // glDrawElements(GL_TRIANGLE_STRIP, 10, GL_UNSIGNED_BYTE, NULL);
+    glDrawRangeElements(GL_TRIANGLES, 0, 12, 12, GL_UNSIGNED_BYTE, (void*)0);
+    glDrawRangeElements(GL_TRIANGLE_STRIP, 12, 22, 10, GL_UNSIGNED_BYTE, (void*)(12 * sizeof(GLbyte)));
 }
 
 struct Graphics *graphicsInit(){
@@ -79,7 +162,7 @@ struct Graphics *graphicsInit(){
         fprintf(stderr, "failed to initialize GLFW\n");
         exit(1);
     }
-    
+
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -87,13 +170,23 @@ struct Graphics *graphicsInit(){
 
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
 
-    // GLFWwindow *window = glfwCreateWindow(800, 600, "Piano Tutor", glfwGetPrimaryMonitor(), NULL);
-    window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Piano Tutor", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Piano Tutor", NULL, NULL);
     if(!window){
-        fprintf(stderr, "failed to open a GLFW window\n");
+        fprintf(stderr, "failed to open glfw window\n");
+        exit(1);
     }
     glfwMakeContextCurrent(window);
+
     glfwSetWindowUserPointer(window, g);
+
+    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+
+    glfwSetKeyCallback(window, keyCallback);
+    // glfwSetCharCallback(window, characterCallback);
+    // glfwSetCursorPosCallback(window, cursorPosCallback);
+    // glfwSetScrollCallback(window, scrollCallback);
+    // glfwSetMouseButtonCallback(window, mouseButtonCallback);
 
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     glfwGetFramebufferSize(window, &g->width, &g->height);
@@ -104,61 +197,42 @@ struct Graphics *graphicsInit(){
         fprintf(stderr, "failed to initialize GLEW\n");
         exit(1);
     }
-    
-    printf("OpenGL %s, GLSL %s\n", glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION));
+
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(messageCallback, 0);
 
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_BLEND);
+    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // glEnable(GL_SCISSOR_TEST);
 
+    glClearColor(0, 0, 0, 1);
 
-    float _r = getFloatColor(0x0D);
-    float _g = getFloatColor(0x10);
-    float _b = getFloatColor(0x10);
-    // printf("color: %f %f %f\n", _r, _g, _b);
-    glClearColor(_r, _g, _b, 1);
+    interface->shader = graphicsShaderInit();
+    interface->modelShader = graphicsShaderInit();
 
-    glfwSetKeyCallback(window, keyCallback);
-    
+    useShader(interface->shader);
+    shaderMatUniform = getUniformLocation(interface->shader, "modelMatrix");
+
+    useShader(interface->modelShader);
+    modelShaderMatUniform = getUniformLocation(interface->modelShader, "modelMatrix");
+
     g->window = window;
+    interface->g = g;
+
     return g;
 }
 
-void graphicsExit(){
-    glfwTerminate();
-}
+struct Shader *graphicsShaderInit(){
+    struct Shader *shader = shaderInit(VERTEX_SHADER, FRAGMENT_SHADER);
+    glGenVertexArrays(1, &shader->vao);
+    glBindVertexArray(shader->vao);
+    glGenBuffers(1, &shader->vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, shader->vbo);
+    
+    useShader(shader);
 
-void clear(){
-    glClear(GL_COLOR_BUFFER_BIT);
-}
+    GLint posAttrib = glGetAttribLocation(shader->program, "position");
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, 0);
+    glEnableVertexAttribArray(posAttrib);
 
-void swap(struct Graphics *g){
-    glfwSwapBuffers(g->window);
-}
-
-bool isRunning(){
-    return run;
-}
-
-void drawRectangle(float x, float y, float width, float height){
-    float rectangle[] = {
-        x           , y + height, // A
-        x + width   , y + height, // b
-        x           , y, // d
-        x + width   , y  // c
-    };
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(rectangle), rectangle, GL_DYNAMIC_DRAW);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-}
-
-void drawLine(float x1, float y1, float x2, float y2){
-    float line[] = {
-        x1, y1,
-        x2, y2,
-    };
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
-    glDrawArrays(GL_LINES, 0, 2);
+    return shader;
 }

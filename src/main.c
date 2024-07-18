@@ -1,9 +1,14 @@
 #include <stdio.h>
 
-#include "midiParser.h"
-#include "piano.h"
-#include "sheets.h"
+// #include "midiParser.h"
+// #include "piano.h"
+// #include "sheets.h"
 #include "inputParser.h"
+
+#include "interface.h"
+
+#include "xmlParser.h"
+#include "piano.h"
 
 // void test(uint8_t *data){
 //     uint32_t i = 0;
@@ -17,7 +22,7 @@
 
 // OPTIONS
 bool printHelp = false;
-char *midiFilePath = NULL;
+char *midiFilePath = NULL, *mxlFilePath = NULL;
 char *midiDevicePath;
 char *mode;
 char *difficulty;
@@ -38,6 +43,7 @@ struct InputParser inputParser = {
     11,
     {
         FLAG_2_SIZE("-h", "--help", &printHelp, INPUT_TYPE_SWITCH, "print this help message"),
+        FLAG_2_SIZE("-f", "--file", &mxlFilePath, INPUT_TYPE_STR, "specifi mxl file"),
         FLAG_2_SIZE("-m", "--midi", &midiFilePath, INPUT_TYPE_STR, "specifi midi file"),
         FLAG_1_SIZE("--device", &midiDevicePath, INPUT_TYPE_STR, "specifi path to midi device\n\
                 options: \"auto\", [absolutePath] [onlyMidiDeviceName]\n\
@@ -55,6 +61,10 @@ struct InputParser inputParser = {
     },
 };
 
+struct Interface *interface = NULL;
+GLint shaderMatUniform = 0;
+GLint modelShaderMatUniform = 0;
+
 int main(int argc, char **argv){
     parseInput(inputParser, argc, argv);
 
@@ -63,47 +73,59 @@ int main(int argc, char **argv){
         return 0;
     }
     
+    interface = calloc(1, sizeof(struct Interface));
+    
     // TODO: max percisionLevel is 10 ^ 9 so it would fit in uint32_t and float has limited number of fraction
-    uint32_t percision = pow(10, percisionLevel);
+    // uint32_t percision = pow(10, percisionLevel);
+    //
+    // struct MidiSheet sheet;
+    // struct MidiNoteDuration *validNotes = generateValidNotes(percision, &sheet.validNotesSize);
+    // sheet.validNotes = validNotes;
+    // if(showNotes){
+    //     validNotesPrint(validNotes, sheet.validNotesSize);
+    //     return 0;
+    // }
 
-    size_t validNotesSize = 0;
-    struct Sheet sheet;
-    struct NoteDuration *validNotes = generateValidNotes(percision, &sheet.validNotesSize);
-    sheet.validNotes = validNotes;
-    if(showNotes){
-        validNotesPrint(validNotes, sheet.validNotesSize);
-        return 0;
-    }
-
-    if(midiFilePath == NULL){
-        fprintf(stderr, "no midi file specified\n");
+    if(mxlFilePath == NULL && midiFilePath == NULL){
+        fprintf(stderr, "no xml or midi file specified\n");
         return 1;
     }
 
-    struct Song *song = midiParser(midiFilePath);
-    struct SongInfo songInfo = {percision, upbeatDur,upbeatRestDur, NULL, 0};
-    songsNoteDurations(song, &songInfo, &sheet, printSongsNoteDurations);
+    size_t measuresSize = 0;
+    struct Measure **measures = readNotes(mxlFilePath, &measuresSize);
 
-    if(printSongsNoteDurations){
-        return 0;
-    }
-    
-    if(correctionFilePath){
-        correctDurations(correctionFilePath, &songInfo, &sheet);
+    struct Piano *piano = pianoInit(measures, measuresSize);
+    while(!glfwWindowShouldClose(interface->g->window)){
+        drawSheet(piano);
+        // exit(1);
     }
 
-    generateMeasure(song, &songInfo, &sheet);
-    generateSheet(song, songInfo);
-
-    // return 0;
-    int midiDevice = midiDeviceInit("auto");
-    uint8_t trackMask = 1;
-    uint8_t noteMask = (1 << C);
-    // uint8_t noteMask = 0xff;
-    // selectRegion(song, trackMask);
-    pianoInit();
-    playSong(song, midiDevice, noteMask);
-    // learnSong(song, TUTORIAL, trackMask, noteMask);
-    pianoExit();
+    glfwTerminate();
+    return 0;
+    // struct MidiSong *song = midiParser(midiFilePath);
+    // struct MidiSongInfo songInfo = {percision, upbeatDur,upbeatRestDur, NULL, 0};
+    // songsNoteDurations(song, &songInfo, &sheet, printSongsNoteDurations);
+    //
+    // if(printSongsNoteDurations){
+    //     return 0;
+    // }
+    // 
+    // if(correctionFilePath){
+    //     correctDurations(correctionFilePath, &songInfo, &sheet);
+    // }
+    //
+    // generateMeasure(song, &songInfo, &sheet);
+    // generateSheet(song, songInfo);
+    //
+    // // return 0;
+    // int midiDevice = midiDeviceInit("auto");
+    // uint8_t trackMask = 1;
+    // uint8_t noteMask = (1 << C);
+    // // uint8_t noteMask = 0xff;
+    // // selectRegion(song, trackMask);
+    // pianoInit();
+    // playSong(song, midiDevice, noteMask);
+    // // learnSong(song, TUTORIAL, trackMask, noteMask);
+    // pianoExit();
     return 0;
 }

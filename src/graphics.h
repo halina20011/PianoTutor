@@ -5,15 +5,30 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-#include <stdio.h>
+#define CGLM_DEFINE_PRINTS 1
+#define DEBUG 1
+
+#include <cglm/cglm.h>
+#include <cglm/types.h>
+#include <cglm/io.h>
+
+#include <cglm/mat4.h>
+#include <cglm/vec4.h>
+
 #include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include <ctype.h>
 
-#include "midiParser.h"
+#include "./shader.h"
+#include "./shaders.h"
 
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 800
-// #define WINDOW_WIDTH 1366
-// #define WINDOW_HEIGHT 768
+#include "color.h"
+
+#define WINDOW_WIDTH 1362
+#define WINDOW_HEIGHT 716
+
+#define MAX_COMMAND_BUFFER_SIZE 200
 
 struct Graphics{
     GLFWwindow *window;
@@ -23,19 +38,11 @@ struct Graphics{
 };
 
 struct Graphics *graphicsInit();
+void processPollEvents();
 
-void graphicsExit();
+void drawLine(float x1, float y1, float z1, float x2, float y2, float z2);
+void drawLineWeight(vec3 p1, vec3 p2, vec3 pos, float rotation, GLuint arrayBuffer, GLuint elementArrayBuffer, GLuint modelUniformLocation);
 
-float getFloatColor(uint8_t val);
-uint8_t notePosition(const char *noteName, int8_t octave);
-
-void clear();
-void swap(struct Graphics *g);
-bool isRunning();
-
-void drawRectangle(float x, float y, float width, float height);
-void drawLine(float x1, float y1, float x2, float y2);
-
-void drawTexture(uint8_t textureIndex, float x, float y, float width, float height);
+struct Shader *graphicsShaderInit();
 
 #endif

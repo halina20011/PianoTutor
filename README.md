@@ -8,7 +8,12 @@ This is also meant to be FOSS tool/app as a replacement to a lot of paied option
 ## Dependencies
 - glew (opengl)
 - glfw
+- libxml2
+- cglm
 - freetype2 (only for development)
+
+## Software
+- Blender
 
 ```
 sudo apt install libglew-dev libglfw3-dev

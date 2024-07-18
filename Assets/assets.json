@@ -1,0 +1,51 @@
+{
+    "clefs": [
+        "fClef15Up",
+        "fClef8Up",
+        "fClef",
+        "fClef8Down",
+        "fClef15Down",
+
+        "gClef15Up",
+        "gClef8Up",
+        "gClef",
+        "gClef8Down",
+        "gClef15Down",
+        "cClef"
+    ],
+    "timeSignatures": [
+        "commonTime",
+        "cutTime",
+        "time2",
+        "time3",
+        "time4",
+        "time6",
+        "time8"
+    ],
+    "rests": [
+        "wholeRest",
+        "halfRest",
+        "eightRest",
+        "sixteenthRest",
+        "thirtySecondRest",
+        "sixtyFourthRest",
+        "hundertTwentyEightRest"
+    ],
+    "noteHeads":[
+        "doubleWholeHead",
+        "wholeHead",
+        "halfHead",
+        "quaterHead"
+    ],
+    "flags":[
+        "flag1",
+        "flag2",
+        "flag3",
+        "flag4",
+        "flag5"
+    ],
+    "accidental": [
+        "sharp",
+        "flat"
+    ]
+}

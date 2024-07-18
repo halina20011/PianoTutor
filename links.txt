@@ -1,4 +1,11 @@
-# Parsing midi file
+### libzip
+https://libzip.org/documentation/
+
+### libxml2 
+api reference: https://gnome.pages.gitlab.gnome.org/libxml2/devhelp/general.html
+parse file by chunk: http://xmlsoft.org/examples/parse4.c
+ 
+### Parsing midi file
 http://www.music.mcgill.ca/~ich/classes/mumt306/StandardMIDIfileformat.html#BM3_
 https://music.stackexchange.com/questions/36223/whats-the-purpose-of-the-key-signature-information-in-a-midi-file#36225
 
@@ -8,11 +15,22 @@ http://www.music.mcgill.ca/~ich/classes/mumt306/StandardMIDIfileformat.html
 
 https://freetype.org/freetype2/docs/tutorial/step1.html#section-1
 
+https://stackoverflow.com/questions/2467995/actual-note-duration-from-midi-duration
+https://music.stackexchange.com/questions/118776/how-to-calculate-music-sheet-symbols-duration-in-midi-file
+
+https://www.tutorialspoint.com/cprogramming/c_bit_fields.htm
+
 # Music theory
 https://en.wikipedia.org/wiki/List_of_musical_symbols
+https://en.wikipedia.org/wiki/Note_value
+https://en.wikipedia.org/wiki/Tuplet
 
 https://hellomusictheory.com/learn/types-of-musical-notes/
 https://hellomusictheory.com/learn/the-stave/
 
-https://en.wikipedia.org/wiki/List_of_musical_symbols
-https://en.wikipedia.org/wiki/Trill_(music)
+http://openlilylib.org/lilyglyphs/
+https://github.com/uliska/lilyglyphs
+
+https://www.mutopiaproject.org/browse.html
+
+https://www.fluidsynth.org/api/fluidsynth_arpeggio_8c-example.html#a4

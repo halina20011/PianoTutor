@@ -1,118 +1,136 @@
 #include "text.h"
+#include "interface.h"
 
-uint8_t textBitmap[BITMAP_SIZE];
+extern struct Interface *interface;
 
-void readBitmap(const char fileName[]){
-    FILE *file = fopen(fileName, "rb");
-    if(!file){
-        fprintf(stderr, "unable to open file: %s\n", fileName);
-        exit(1);
-    }
-
-    fseek(file, 0, SEEK_END);
-    size_t size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    fread(textBitmap, 1, size, file);
-    fclose(file);
-}
-
-struct Text *textInit(float *screenRatio){
+struct Text *textInit(struct Shader *shader, float *screenRatio){
     struct Text *text = malloc(sizeof(struct Text));
     text->screenRatio = screenRatio;
 
-    readBitmap("src/bitmap.raw");
-
-    text->shader = shaderInit(VERTEX_TEXT_SHADER, FRAGMENT_TEXT_SHADER);
-    useShader(text->shader);
-
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-
-    text->colorUniform = getUniformLocation(text->shader, "textureColor");
-    text->textureUniform = getUniformLocation(text->shader, "textureSampler");
-    
-    uint8_t tempTexture[TEXTURE_SIZE * TEXTURE_SIZE];
-
-    int offset = 0;
-    for(uint8_t i = 0; i < 127; i++){
-        text->asciiMap[i].texture = 0;
-        if(isprint(i)){
-            // copy the texture
-            // float sum = 0;
-            for(int y = 0; y < TEXTURE_SIZE; y++){
-                for(int x = 0; x < TEXTURE_SIZE; x++){
-                    int fromIndex = (y * TEXTURE_SIZE + x + offset);
-                    int index = ((TEXTURE_SIZE - y - 1) * TEXTURE_SIZE + x);
-                    // sum += (float)textBitmap[fromIndex];
-                    tempTexture[index] = textBitmap[fromIndex];
-                }
-            }
-            
-            offset += TEXTURE_SIZE * TEXTURE_SIZE;
-
-            int lastPixel = offset - 1;
-            // uint8_t offsetLeft = textBitmap[lastPixel - 1];
-            uint8_t width = textBitmap[lastPixel - 1];
-            uint8_t offsetTop = textBitmap[lastPixel];
-            // printf("%c %i, %i\n", i, offsetLeft, offsetTop);
-
-            GLuint textureName;
-            glGenTextures(1, &textureName);
-            glBindTexture(GL_TEXTURE_2D, textureName);
-            // printf("char %c => texure name: %i avg %f\n", i, textureName, sum / (float)(w * h));
-            text->asciiMap[i].texture = textureName;
-            text->asciiMap[i].width = width;
-            text->asciiMap[i].bearingTop = offsetTop;
-            // text->asciiMap[i].bearingLeft = offsetLeft;
-            // printf("t => %c %i %i\n", i, i, textureName);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-                        
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, TEXTURE_SIZE, TEXTURE_SIZE, 0, GL_RED, GL_UNSIGNED_BYTE, tempTexture);
-        }
+    FILE *file = fopen("Assets/text.bin", "rb");
+    if(!file){
+        fprintf(stderr, "unable to open file: %s\n", "Assets/text.bin");
+        exit(1);
     }
 
-    text->asciiMap[' '].width = text->asciiMap['A'].width;
+    int8_t numberOfChar = 0;
+    fread(&numberOfChar, sizeof(uint8_t), 1, file);
+    printf("number of characters %i\n", numberOfChar);
+    uint32_t bufferSize = 0;
+    fread(&bufferSize, sizeof(uint32_t), 1, file);
 
+    uint32_t bufferIndex = 0;
+    float *buffer = malloc(sizeof(float) * bufferSize);
+
+    for(uint32_t i = 0; i < numberOfChar; i++){
+        char c;
+        fread(&c, sizeof(char), 1, file);
+        uint32_t size;
+        fread(&size, sizeof(uint32_t), 1, file);
+        // fprintf(stderr, "%i %i + %i =>\n", bufferSize, bufferIndex, size);
+        float *data = &buffer[bufferIndex];
+        fread(data, sizeof(float), size, file);
+
+        text->asciiMap[(int)c].index = bufferIndex / 5;
+        text->asciiMap[(int)c].size = size / 5;
+        float width = 0;
+        for(uint32_t j = 0; j < size; j += 5){
+            if(width < data[j]){
+                width = data[j];
+            }
+        }
+        text->asciiMap[(int)c].width = width;
+
+        bufferIndex += size;
+    }
+
+    fclose(file);
+
+    glGenVertexArrays(1, &text->VAO);
+    glBindVertexArray(text->VAO);
+
+    glGenBuffers(1, &text->VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, text->VBO);
+
+    GLint posAttrib = glGetAttribLocation(shader->program, "position");
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, 0);
+    GLint textAttrib = glGetAttribLocation(shader->program, "texture");
+    glVertexAttribPointer(textAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 3));
+    glEnableVertexAttribArray(posAttrib);
+    glEnableVertexAttribArray(textAttrib);
+
+    // float buffer2[] = {
+    //     0, 0, 0, 0, 0,
+    //     1, 0, 0, 0, 0,
+    //     0, 1, 0, 0, 0,
+    // };
+    // glBufferData(GL_ARRAY_BUFFER, sizeof(buffer2), buffer2, GL_STATIC_DRAW);
+    printf("%p\n", buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * bufferSize, buffer, GL_STATIC_DRAW);
+    
+    // for(int i = 0; i < 20; i++){
+    //     printf("%f ", buffer[i]);
+    //     if((i+1) % 5 == 0){
+    //         printf("\n");
+    //     }
+    // }
+    
     return text;
 }
 
-void textDraw(struct Text *text, char *str, float x, float y, float size){
-    float width = size;
-    float height = size * (*text->screenRatio);
-    useShader(text->shader);
+// float textSetHeightPx(uint16_t height){
+//     float h = ((float)height / (float)interface->g->height);
+//     text->height = h;
+//     float s = h * 2.0f;
+//     text->scale = s;
+//     // printf("%i %f %f\n", height, h, s);
+//     return h * 2;
+// }
 
-    glDisable(GL_DEPTH_TEST);
-    for(int i = 0; str[i]; i++){
-        struct CharInfo charInfo = text->asciiMap[(int)str[i]];
-        GLint texture = charInfo.texture;
-        uint8_t o = charInfo.bearingTop;
-        float offsetY = ((float)o / (float)TEXTURE_SIZE) * size;
-
-        float vertices[] = {
-            x               , y + offsetY             ,  0.0f, 0.0f,
-            x               , y + offsetY + height    ,  0.0f, 1.0f,
-            x + width       , y + offsetY             ,  1.0f, 0.0f,
-            x + width       , y + offsetY + height    ,  1.0f, 1.0f,
-        };
-
-        // printf("texture %i %i\n", texture, str[i]);
-        glActiveTexture(GL_TEXTURE0 + texture);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glUniform1i(text->textureUniform, texture);
-        
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        x += ((float)charInfo.width / (float)TEXTURE_SIZE) * size * 1.2;
-    }
+float textSetHeight(float height){
+    interface->text->height = height;
+    interface->text->scale = height * 2.0f;
+    return height * 2.0f;
 }
 
-void textColor(struct Text *text, struct TextColor color){
-    glUniform3fv(text->colorUniform, 1, (float*)&color);
+float textGetWidth(char *str){
+    size_t s = strlen(str);
+    return (float)s * interface->text->scale * interface->text->asciiMap[(int)'H'].width;
+}
+
+float textDrawOnScreen(char *str, float x, float y, GLint modelUniformLocation){
+    glBindVertexArray(interface->text->VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, interface->text->VBO);
+
+    // glBindBuffer(GL_ARRAY_BUFFER, text->VBO);
+    mat4 model;
+    glm_mat4_identity(model);
+    glm_translate(model, (vec3){x, y, 0});
+    float s = interface->text->scale;
+    glm_scale(model, (vec3){s, s * (*(interface->text->screenRatio)), s});
+
+    float currOffset = 0;
+    int i = 0;
+    for(; str[i]; i++){
+        glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)model);
+        if(str[i] == ' '){
+            float offset = interface->text->asciiMap[(int)'H'].width;
+            glm_translate(model, (vec3){offset, 0, 0});
+            currOffset += offset * s;
+            continue;
+        }
+        
+        struct TextInfo *tInfo = &interface->text->asciiMap[(int)str[i]];
+
+        uint32_t start = tInfo->index;
+        uint32_t size = tInfo->size;
+        float offset = tInfo->width;
+
+        glDrawArrays(GL_TRIANGLES, start, size);
+        glm_translate(model, (vec3){offset, 0, 0});
+
+        currOffset += offset * s;
+    }
+    
+    return currOffset;
 }

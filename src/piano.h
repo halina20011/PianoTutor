@@ -1,55 +1,24 @@
 #ifndef PIANO
 #define PIANO
 
-#include <stdio.h>
+#include <string.h>
+#include <float.h>
 #include <stdlib.h>
-#include <stdint.h>
 
-#include "color.h"
+#include "vector.h"
+
+#include "pianoTypes.h"
+#include "xmlParser.h"
 #include "graphics.h"
-#include "midiDevice.h"
-#include "text.h"
-#include "window.h"
 
-#define C_NOTE           0
-#define C_NOTE_SHARP     1
-#define D_NOTE           2
-#define D_NOTE_SHARP     3
-#define E_NOTE           4
-#define F_NOTE           5
-#define F_NOTE_SHARP     6
-#define G_NOTE           7
-#define G_NOTE_SHARP     8
-#define A_NOTE           9
-#define A_NOTE_SHARP     10
-#define H_NOTE           11
+#include "compute.h"
 
-enum NOTES{
-    C,
-    D,
-    E,
-    F,
-    G,
-    A,
-    H
-};
+typedef uint8_t MeshStrIdSize;
+typedef uint8_t MeshId;
+#define MAX_MODEL_ID_SIZE 255
 
-#define TUTORIAL 0
-
-struct PressedNote{
-    uint8_t type;
-    float end;
-};
-
-void pianoInit();
-void pianoExit();
-
-void precalculateNotes();
-void selectRegion(struct Song *song, uint8_t trackMask);
-
-void drawVisibleNotes(struct Song *song, uint8_t *noteBuffer, uint8_t trackMask, uint8_t noteMask);
-
-void learnSong(struct Song *song, int midiDevice, uint8_t mode, uint8_t trackMask, uint8_t notesNameMask);
-void playSong(struct Song *song, int midiDevice, uint8_t notesNameMask);
+struct Piano *pianoInit(struct Measure **measures, size_t measureSize);
+void computeMeasures(struct Piano *piano);
+void drawSheet(struct Piano *piano);
 
 #endif

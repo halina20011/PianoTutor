@@ -3,9 +3,15 @@ CC = gcc
 FILES = $(wildcard ./src/*.c)
 OBJECTS = $(patsubst ./src/%.c, ./build/%.o, $(FILES))
 # LDFLAGS = -lm -lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lGLEW -lEGL -lGL -lGLU -lOpenGL
-LDFLAGS = -lc -lm $(shell pkg-config --static --libs glew) $(shell pkg-config --libs glfw3)
+# zlib
+LDFLAGS = -lc -lm \
+	$(shell pkg-config --libs cglm) \
+	$(shell pkg-config --static --libs glew) \
+	$(shell pkg-config --libs glfw3) \
+	$(shell xml2-config --libs) \
+	$(shell pkg-config --libs libzip)
 
-CPPFLAGS =
+CPPFLAGS = $(shell xml2-config --cflags)
 CFLAGS = -Wall -Wextra -Wshadow
 
 .PHONY: update urun
@@ -33,7 +39,22 @@ main: $(OBJECTS)
 # flags = -m /home/mario/Documents/Notes/Fantaisie-Impromptu_in_C_Minor__Chopin.mid
 # flags = -m /home/mario/Documents/Notes/Pirates_of_The_Caribbean_Medley.mid
 # flags = -m /home/mario/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mid --percision 5 --analyse
-flags = -m /home/mario/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mid
+# flags = -m /home/mario/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mid
+
+# MXL
+# flags = -f /home/mario/Documents/Notes/ainekuraine.mxl
+# flags = -f /home/mario/Documents/Notes/Bad_Apple_Original_ver.mxl
+# flags = -f /home/mario/Documents/Notes/Giornos_Theme.mxl
+# flags = -f /home/mario/Documents/Notes/HOUSE_OF_WOLVES_-_MY_CHEMICAL_ROMANCE_-_PIANO_ARRANGEMENT.mxl
+# flags = -f /home/mario/Documents/Notes/Life_Eternal__Ghost_Piano_advanced.mxl
+flags = -f /home/mario/Documents/Notes/Megalovania.mxl
+# flags = -f /home/mario/Documents/Notes/Rats.mxl
+# flags = -f /home/mario/Documents/Notes/Pirates_of_The_Caribbean_Medley.mxl
+# flags = -f /home/mario/Documents/Notes/Rats.mxl
+# flags = -f /home/mario/Documents/Notes/Shreksophone__Shrek_and_Donkey.mxl
+# flags = -f /home/mario/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mxl
+# flags = -f /home/mario/Documents/Notes/Mr_Doctor_Man_-_Palaye_Royale.mxl
+# flags = -f /home/mario/Documents/MuseScore4/Scores/test.mxl
 # flags = --help
 # flags += --durations
 # flags += --upbeat 1 -c preludeCF.txt

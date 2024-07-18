@@ -1,3 +1,7 @@
 build/
 .gdb_history
 **/*.txt
+Notes/
+Assets/Images
+
+**.blend1
