@@ -5,26 +5,23 @@
 extern struct MeshBoundingBox *meshBoundingBoxes;
 
 // C, G, D, A, E, H, F, C
-#define NOTE_PITCH(step, octave) ((struct NotePitch){step, octave, 0})
+#define NOTE_PITCH(step, octave) ((struct NotePitch){step, octave, 0, 0})
 #define P NOTE_PITCH
 struct NotePitch sharp[7] = {P(3, 5), P(0, 5), P(4, 5), P(1, 5), P(5, 3), P(2, 5), P(6, 3)};
 struct NotePitch flats[7] = {P(6, 4), P(2, 5), P(5, 4), P(1, 5), P(4, 4), P(0, 5), P(3, 4)};
-
-#define TO_PITCH(notePitch)     (notePitch.octave * 8 + notePitch.step)
-#define TO_PITCH_P(notePitch)   (notePitch->octave * 8 + notePitch->step)
 
 float positionFromCenter(enum Clef clef, struct NotePitch *notePitch){
     Pitch pitch = TO_PITCH_P(notePitch);
     Pitch center = 0;
     if(G_CLEF_15_UP <= clef && clef <= G_CLEF_15_DOWN){
         // center h, 4 => 6, 4
-        struct NotePitch centerPitch = {6, 4, 0};
+        struct NotePitch centerPitch = {6, 4, 0, 0};
         center = TO_PITCH(centerPitch) + (G_CLEF - clef) * 8;
         // center = 4 * 8 + 4 + (G_CLEF - clef) * 8;
     }
     else if(F_CLEF_15_UP <= clef && clef <= F_CLEF_15_DOWN){
         // center d, 3 => 2, 3
-        struct NotePitch centerPitch = {2, 3, 0};
+        struct NotePitch centerPitch = {2, 3, 0, 0};
         center = TO_PITCH(centerPitch) + (F_CLEF - clef) * 8;
         // center = 3 * 8 + 2 + (F_CLEF - clef) * 8;
     }
@@ -226,7 +223,9 @@ void computeNote(struct ItemPVector *itemVector, struct Attributes *currAttribut
     bool isFlat = GET_BIT(note->flags, IS_FLAT_FLAG);
     if(GET_BIT(note->flags, IS_ACCIDENTAL_FLAG)){
         enum Meshes meshId = (isFlat) ? FLAT : SHARP;
-        ItemPVectorPush(itemVector, itemMeshInit(meshId, staffIndex, *offset, y));
+        struct Item *item = itemMeshInit(meshId, staffIndex, *offset, y);
+        note->item = item;
+        ItemPVectorPush(itemVector, item);
         *offset += MBB_MAX(meshId)[0];
     }
 
@@ -240,7 +239,9 @@ void computeNote(struct ItemPVector *itemVector, struct Attributes *currAttribut
     notePitchExtremes[staffIndex][1] = MAX(y, c);
 
     enum Meshes meshId = (GET_BIT(note->flags, REST_FLAG)) ? noteRest(note) : noteHead(note);
-    ItemPVectorPush(itemVector, itemMeshInit(meshId, staffIndex, *offset, y));
+    struct Item *item = itemMeshInit(meshId, staffIndex, *offset, y);
+    note->item = item;
+    ItemPVectorPush(itemVector, item);
 }
 
 // uint8_t noteSteam(n){
@@ -264,7 +265,7 @@ void computeNotes(struct ItemPVector *itemVector, struct Attributes *currAttribu
     float extreme = 0;
     NOTE_EXTREME(extreme, min, max);
     struct Note *note = (notes->chordSize) ? notes->chord[0] : notes->note;
-    printf("beams: %i\n", notes->beams);
+    // printf("beams: %i\n", notes->beams);
     if(GET_BIT(note->flags, REST_FLAG) == 0 && notes->beams == 0 && NOTE_TYPE_HALF <= note->noteType){
         if(note->noteType < NOTE_TYPE_EIGHTH){
             return;

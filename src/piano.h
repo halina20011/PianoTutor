@@ -13,12 +13,16 @@
 
 #include "compute.h"
 
+#include "midiDevice.h"
+
 typedef uint8_t MeshStrIdSize;
 typedef uint8_t MeshId;
 #define MAX_MODEL_ID_SIZE 255
 
 struct Piano *pianoInit(struct Measure **measures, size_t measureSize);
 void computeMeasures(struct Piano *piano);
-void drawSheet(struct Piano *piano);
+void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes);
+
+void pianoPlaySong(struct Piano *piano, int midiDevice);
 
 #endif

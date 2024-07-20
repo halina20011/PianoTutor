@@ -187,6 +187,7 @@ void parsePitch(xmlNodePtr node, struct Note *note){
             long alter = parseBody(children);
             // sharp == 1 #
             // flat == -1 b
+            note->pitch.alter = alter;
             if(alter == 1 || alter == -1){
                 SET_BIT(note->flags, IS_ACCIDENTAL_FLAG);
                 if(alter == -1){
@@ -236,6 +237,7 @@ void parseTimeModification(xmlNodePtr parent, struct Note *note){
 
 // <beam>
 // https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/beam/
+// https://www.w3.org/2021/06/musicxml40/musicxml-reference/data-types/beam-value/
 void parseBeam(xmlNodePtr parent, Beams *rBeams){
     int number = parseProp(parent, "number");
     char *body = (char*)xmlNodeGetContent(parent);

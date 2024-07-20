@@ -124,6 +124,13 @@ struct Piano{
     struct Sheet *sheet;
 };
 
+struct PressedNote{
+    Division endDivision;
+    struct Note *note;
+};
+
+NEW_VECTOR_TYPE(struct PressedNote*, PressedNotePVector);
+
 struct Sheet{
     struct ItemMeasure **measures;
     size_t measuresSize;

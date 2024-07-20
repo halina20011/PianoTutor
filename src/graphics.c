@@ -6,6 +6,9 @@ extern struct Interface *interface;
 extern GLint shaderMatUniform;
 extern GLint modelShaderMatUniform;
 
+extern GLint shaderColorUniform;
+extern GLint modelShaderColorUniform;
+
 #define UNPACK3(val) val[0], val[1], val[2]
 
 #define IGNORE __attribute__ ((unused))
@@ -211,9 +214,13 @@ struct Graphics *graphicsInit(){
 
     useShader(interface->shader);
     shaderMatUniform = getUniformLocation(interface->shader, "modelMatrix");
+    shaderColorUniform = getUniformLocation(interface->shader, "color");
+    SET_COLOR(shaderColorUniform, WHITE);
 
     useShader(interface->modelShader);
     modelShaderMatUniform = getUniformLocation(interface->modelShader, "modelMatrix");
+    modelShaderColorUniform = getUniformLocation(interface->shader, "color");
+    SET_COLOR(modelShaderColorUniform, WHITE);
 
     g->window = window;
     interface->g = g;

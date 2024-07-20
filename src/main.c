@@ -65,6 +65,9 @@ struct Interface *interface = NULL;
 GLint shaderMatUniform = 0;
 GLint modelShaderMatUniform = 0;
 
+GLint shaderColorUniform = 0;
+GLint modelShaderColorUniform = 0;
+
 int main(int argc, char **argv){
     parseInput(inputParser, argc, argv);
 
@@ -95,10 +98,13 @@ int main(int argc, char **argv){
     struct Measure **measures = readNotes(mxlFilePath, &measuresSize);
 
     struct Piano *piano = pianoInit(measures, measuresSize);
-    while(!glfwWindowShouldClose(interface->g->window)){
-        drawSheet(piano);
-        // exit(1);
-    }
+    int midiDevice = midiDeviceInit("auto");
+    // while(!glfwWindowShouldClose(interface->g->window)){
+    //     drawSheet(piano);
+    //     // exit(1);
+    // }
+
+    pianoPlaySong(piano, midiDevice);
 
     glfwTerminate();
     return 0;

@@ -13,6 +13,9 @@
 #define MBB_MIN(id) meshBoundingBoxes[id].min
 #define MBB_MAX(id) meshBoundingBoxes[id].max
 
+#define TO_PITCH(notePitch)     (notePitch.octave * 8 + notePitch.step)
+#define TO_PITCH_P(notePitch)   (notePitch->octave * 8 + notePitch->step)
+
 #define NOTE_EXTREME(variable, min, max) (variable = (-min < max) ? max : min)
 
 struct Item *itemInit(enum ItemType type, enum Meshes meshId, StaffNumber staffIndex, void *data);

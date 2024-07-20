@@ -14,6 +14,7 @@
 
 #include "vector.h"
 #include "xmlTypes.h"
+#include "pianoTypes.h"
 
 #define SIGNATURE_TYPE 0xf
 #define MAX_NOTE_MAGAZINE_SIZE 255
@@ -74,6 +75,7 @@ enum NoteFlag{
 
 struct NotePitch{
     Pitch step, octave, stepChar;
+    uint8_t alter;
 };
 
 struct Note{
@@ -86,6 +88,7 @@ struct Note{
     uint8_t accidentals;
     NoteDuration duration;
     Tuplet tuplet;
+    struct Item *item;
 };
 
 NEW_VECTOR_TYPE(struct Measure*, MeasurePVector);

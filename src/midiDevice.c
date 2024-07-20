@@ -19,10 +19,12 @@ int midiDeviceInit(char *path){
             midiDevicePath = firstMatch;
         }
     }
+
     if(midiDevicePath == NULL){
         fprintf(stderr, "no midi device\n");
         exit(1);
     }
+    
     int f = open(midiDevicePath, O_RDWR | O_NONBLOCK);
     if(f < 0){
         fprintf(stderr, "failed to open midi device\n");
@@ -52,9 +54,21 @@ int getNumDataBytes(uint8_t statusByte) {
     }
 }
 
-void sendNoteEvent(int midiDevice, uint8_t eventType, uint8_t noteNumber, uint8_t velocity){
-    // printf("MIDI message: %02X %02X %02X\n", eventType, noteNumber, velocity);
-    uint8_t message[] = {eventType, noteNumber, velocity};
+uint8_t stepArray[] = {0, 2, 4, 5, 7, 9, 11};
+
+uint8_t toPitch(struct NotePitch *pitch){
+    uint8_t step = stepArray[pitch->step];
+    uint8_t r = (pitch->octave) * 12 + step + pitch->alter;
+    // printf("%i %i %i\n", step, pitch->stepChar, r);
+    return r;
+}
+
+void sendNoteEvent(int midiDevice, uint8_t eventType, struct NotePitch *notePitch, uint8_t velocity){
+    uint8_t pitch = toPitch(notePitch);
+    printf("[%i:%i] => %i\n", notePitch->step, notePitch->octave, pitch);
+    // printf("MIDI message: %02X %02X %02X\n", eventType, pitch, velocity);
+    printf("MIDI message: %03i %03i %03i\n", eventType, pitch, velocity);
+    uint8_t message[] = {eventType, pitch, velocity};
     write(midiDevice, message, sizeof(message));
 }
 
@@ -78,7 +92,7 @@ void midiRead(int fd, uint8_t *noteBuffer){
             // }
         }
         else{
-            if(numDataBytes > 0){
+            if(0 < numDataBytes){
                 dataBytes[numDataBytes - 1] = byte;
                 numDataBytes--;
 

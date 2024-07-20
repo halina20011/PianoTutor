@@ -1,9 +1,9 @@
 
 #define FRAGMENT_SHADER "#version 330 core\n"\
-    "uniform vec3 color;\n"\
+    "uniform vec4 color;\n"\
     "out vec4 outColor;\n"\
     "void main(){\n"\
-    "    outColor = vec4(1, 1, 1, 1.0);\n"\
+    "    outColor = color;\n"\
     "}\n"
 
 #define VERTEX_SHADER "#version 330 core\n"\

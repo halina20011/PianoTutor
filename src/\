@@ -5,9 +5,6 @@ extern struct Interface *interface;
 extern GLint shaderMatUniform;
 extern GLint modelShaderMatUniform;
 
-extern GLint shaderColorUniform;
-extern GLint modelShaderColorUniform;
-
 struct MeshBoundingBox *meshBoundingBoxes;
 
 #define MATCH(MATCH_NAME, MATCH_ID){ \
@@ -20,8 +17,6 @@ VECTOR_TYPE_FUNCTIONS(size_t, SizeVector, "");
 VECTOR_TYPE_FUNCTIONS(struct Item*, ItemPVector, "");
 VECTOR_TYPE_FUNCTIONS(struct Item**, ItemPPVector, "");
 VECTOR_TYPE_FUNCTIONS(struct ItemMeasure*, ItemMeasurePVector, "");
-
-VECTOR_TYPE_FUNCTIONS(struct PressedNote*, PressedNotePVector, "");
 
 uint8_t assignMeshId(char *name){
     MATCH("fClef", F_CLEF);
@@ -176,10 +171,12 @@ struct Piano *pianoInit(struct Measure **measures, size_t measureSize){
 
     computeMeasures(piano);
 
+    piano->pressedNotes = ItemPVectorInit();
+
     return piano;
 }
 
-void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
+void drawSheet(struct Piano *piano){
     glClear(GL_COLOR_BUFFER_BIT);
 
     float stretch = 2.0f;
@@ -205,19 +202,6 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
             // printf("meshId: %i\n", meshId);
             if(item->type == ITEM_MESH){
                 useShader(interface->modelShader);
-                SET_COLOR(modelShaderColorUniform, WHITE);
- 
-                bool playedNote = false;
-                for(size_t p = 0; p < pressedNotes->size; p++){
-                    // printf("pn: %p\n", pressedNotes->data[p]);
-                    struct Note *note = pressedNotes->data[p]->note;
-                    if(note->item == item){
-                        // printf("%p == %p\n", note->item, item);
-                        playedNote = true;
-                        SET_COLOR(modelShaderColorUniform, RED);
-                        break;
-                    }
-                }
 
                 size_t trigCount = piano->meshesDataSize[meshId] / 3;
                 GLint index = piano->meshesDataStart[meshId] / 3;
@@ -234,10 +218,6 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
 
                 // printf("mesh id: %i %i %zu\n", meshId, index, trigCount);
                 glDrawArrays(GL_TRIANGLES, index, trigCount);
-
-                if(playedNote == true){
-                    SET_COLOR(modelShaderColorUniform, WHITE);
-                }
             }
             else if(item->type == ITEM_BAR){
 
@@ -293,21 +273,7 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
     glfwPollEvents();
 }
 
-void pressNote(struct Note *note, struct PressedNotePVector *pressedNotes, Division divisionCounter, int midiDevice){
-    sendNoteEvent(midiDevice, NOTE_ON, &note->pitch, 100);
-    struct PressedNote *pressedNote = malloc(sizeof(struct PressedNote));
-    pressedNote->note = note;
-    pressedNote->endDivision = note->duration + divisionCounter;
-    PressedNotePVectorPush(pressedNotes, pressedNote);
-    printf("adding note %p at %zu\n", pressedNote, pressedNotes->size - 1);
-}
-
-void pianoPlaySong(struct Piano *piano, int midiDevice){
-    // uint8_t buffer[300] = {};
-    // while(1){
-    //     midiRead(midiDevice, buffer);
-    // }
-
+void pianoPlaySong(struct Piano *piano){
     struct Measure **measures = piano->measures;
     size_t measureIndex = 0;
     Division currDivision = -1;
@@ -316,20 +282,18 @@ void pianoPlaySong(struct Piano *piano, int midiDevice){
     struct Attributes currAttributes = {};
     float divisionTimer = 0;
 
-    struct PressedNotePVector *pressedNotes = PressedNotePVectorInit();
-
     updateAttributes(measures[0]->attributes[0], &currAttributes);
+    printf("d %i\n", currAttributes.division);
     size_t divisionCounter = 0;
     while(measureIndex < piano->measureSize){
-        drawSheet(piano, pressedNotes);
-
-        struct Measure *currMeasure = measures[measureIndex];
+        struct Measure *currMeasure = measures[0];
         float time = glfwGetTime();
         float alpha = time - prevTime;
         prevTime = time;
-
-        float beat = 60.0f / currBmp;
-        float divisionDuration = (beat * 4.f) / (float)currMeasure->measureSize;
+        
+        float measuresPerMin = currBmp / 4.0f;
+        float measureDuration = measuresPerMin / 60.f;
+        float divisionDuration = measureDuration /  (float)currAttributes.division;
         // printf("dur %f %f %f\n", measuresPerMin,  measureDuration, divisionDuration);
 
         // printf("time %f\n", time);
@@ -337,66 +301,24 @@ void pianoPlaySong(struct Piano *piano, int midiDevice){
         if(divisionTimer < divisionDuration){
             continue;
         }
-            // new division
-        divisionTimer = 0;
-
+        
         // the prev division already passed so increase the index
         currDivision++;
         divisionCounter++;
 
-        if(currMeasure->measureSize <= currDivision){
+        if(currAttributes.division < currDivision){
             measureIndex++;
-            currMeasure = measures[measureIndex];
             currDivision = 0;
-            piano->currMeasure = measureIndex;
-            // exit(0);
         }
 
-        // printf("size: %zu\n", pressedNotes->size);
-        printf("position: %zu %i %f\n", measureIndex, currDivision, divisionDuration);
+        printf("division: %i\n", currDivision);
+        divisionDuration = 0;
+        divisionTimer = 0;
 
-        // turn off any notes
-        for(size_t i = 0; i < pressedNotes->size; ){
-            struct PressedNote *pressedNote = pressedNotes->data[i];
-            if(pressedNote->endDivision <= divisionCounter){
-                sendNoteEvent(midiDevice, NOTE_OFF, &pressedNote->note->pitch, 0);
-
-                // printf("removing %zu note %p\n", i, pressedNote);
-                if(pressedNotes->size - 1 != i){
-                    struct PressedNote *lastNote = pressedNotes->data[pressedNotes->size - 1], *temp = NULL;
-                    // printf("swap {%p} %p\n", pressedNote, lastNote);
-                    temp = pressedNote;
-                    pressedNote = lastNote;
-                    lastNote = temp;
-                    // printf("free %p\n", lastNote);
-                    free(lastNote);
-                    pressedNotes->data[i] = pressedNote;
-                }
-                pressedNotes->size--;
-            }
-            else{
-                i++;
-            }
-        }
-
+            struct ItemPVector *itemVector = piano->pressedNotes
         for(StaffNumber s = 0; s < currAttributes.stavesNumber; s++){
             Staff staff = currMeasure->staffs[s];
             struct Notes *notes = staff[currDivision];
-            if(!notes){
-                continue;
-            }
-
-            if(notes->chordSize){
-                for(ChordSize c = 0; c < notes->chordSize; c++){
-                    struct Note *note = notes->chord[c];
-                    pressNote(note, pressedNotes, divisionCounter, midiDevice);
-                }
-            }
-            else{
-                if(!GET_BIT(notes->note->flags, REST_FLAG)){
-                    pressNote(notes->note, pressedNotes, divisionCounter, midiDevice);
-                }
-            }
         }
     }
 }
