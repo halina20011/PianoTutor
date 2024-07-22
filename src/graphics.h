@@ -23,6 +23,7 @@
 #include "./shader.h"
 #include "./shaders.h"
 
+#include "helpers.h"
 #include "color.h"
 
 #define WINDOW_WIDTH 1362

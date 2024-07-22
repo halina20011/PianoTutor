@@ -5,7 +5,7 @@
 
 #include "pianoTypes.h"
 #include "xmlParser.h"
-
+#include "helpers.h"
 
 #define MIN(a, b) ((a < b) ? a : b)
 #define MAX(a, b) ((a < b) ? b : a)
@@ -18,6 +18,10 @@
 
 #define NOTE_EXTREME(variable, min, max) (variable = (-min < max) ? max : min)
 
+#define BEAM_OFFSET 6.0f
+#define BEAM_HEIGHT 0.5f
+#define BEAM_HEIGHT_OFFSET 0.25f
+
 struct Item *itemInit(enum ItemType type, enum Meshes meshId, StaffNumber staffIndex, void *data);
 struct Item *itemMeshInit(enum Meshes meshId, StaffNumber staffIndex, float xPosition, float yPosition);
 struct Item *itemStreamInit(StaffNumber staffIndex, float xPosition, float yPosition, float height);
@@ -29,11 +33,12 @@ void computeTimeSignature(struct Piano *piano, struct Attributes *attributes, st
 enum NoteType noteDurationToType(struct Note *note, struct Attributes *currAttributes);
 enum Meshes noteHead(struct Note *note);
 enum Meshes noteRest(struct Note *note);
-void computeNote(struct ItemPVector *itemVector, struct Attributes *currAttributes, struct Note *note, NotePitchExtreme *notePitchExtremes, enum Clef clef, StaffNumber staffIndex, float *offset);
-void computeNotes(struct ItemPVector *itemVector, struct Attributes *currAttributes, struct Notes *notes, NotePitchExtreme *notePitchExtremes, enum Clef clef, StaffNumber staffIndex, float *offset);
+void computeNote(struct ItemPVector *itemVector, struct Attributes *currAttributes, struct Note *note, NotePitchExtreme *notePitchExtremes, enum Clef clef, StaffNumber staffIndex, float *offset, float accidentalOffset);
+void computeNotes(struct ItemPVector *itemVector, struct Attributes *currAttributes, struct Notes *notes, NotePitchExtreme *notePitchExtremes, enum Clef clef, StaffNumber staffIndex, float *offset, float accidentalOffset);
 
 
-void notesUpdateExtremes(struct Notes *notes, enum Clef clef, float *rMin, float *rMax, uint8_t *maxBeamHeight);
+void updateBeamHeight(struct Notes *notes, uint8_t *maxBeamHeight);
+void notesUpdateExtremes(struct Notes *notes, enum Clef clef, float *rMin, float *rMax);
 
 float computeMeasure(struct Piano *piano, size_t measureIndex, struct ItemPVector *itemVector, struct Attributes *currAttributes, NotePitchExtreme *notePitchExtremes);
 void computeMeasures(struct Piano *piano);

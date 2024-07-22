@@ -46,6 +46,7 @@
     ],
     "accidental": [
         "sharp",
+        "natural",
         "flat"
     ]
 }

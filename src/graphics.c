@@ -3,6 +3,10 @@
 #include "piano.h"
 
 extern struct Interface *interface;
+
+extern GLint shaderGlobalMatUniform;
+extern GLint modelShaderGlobalMatUniform;
+
 extern GLint shaderMatUniform;
 extern GLint modelShaderMatUniform;
 
@@ -10,8 +14,6 @@ extern GLint shaderColorUniform;
 extern GLint modelShaderColorUniform;
 
 #define UNPACK3(val) val[0], val[1], val[2]
-
-#define IGNORE __attribute__ ((unused))
 
 #define MIN(a, b) ((a < b) ? a : b)
 #define MAX(a, b) ((a < b) ? b : a)
@@ -58,6 +60,11 @@ void processPollEvents(){
     if(!left && !right){
         prevMeasureMovement = 0;   
     }
+
+    bool spacePressed = (glfwGetKey(interface->g->window, GLFW_KEY_SPACE) == GLFW_PRESS);
+    if(spacePressed){
+        interface->paused = !interface->paused;
+    }
 }
 
 void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
@@ -68,9 +75,48 @@ void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
     interface->key = key;
 }
 
+double prevX = -1, prevY = -1;
+void cursorPosCallback(GLFWwindow *w, double x, double y){
+    float xScale = 1.f / interface->g->width;
+    float yScale = 1.f / interface->g->height;
+    printf("%f %f\n", xScale, yScale);
+
+    // float sizeScale = interface->scale;
+
+    if(prevX == -1){
+        prevX = x;
+        prevY = y;
+    }
+
+    if(interface->drag){
+        float alphaX = x - prevX;
+        float alphaY = y - prevY;
+        interface->xPos += alphaX * xScale;
+        interface->yPos -= alphaY * yScale;
+        printf("pos %f %f\n", interface->xPos, interface->yPos);
+    }
+
+    prevX = x;
+    prevY = y;
+}
+
+void mouseButtonCallback(GLFWwindow *w, int button, int action, int modes){
+    if(button == GLFW_MOUSE_BUTTON_LEFT){
+        interface->drag = (action == GLFW_PRESS);
+        prevX = -1;
+    }
+}
+
+void scrollCallback(GLFWwindow *w, double x, double y){
+    // printf("%f\n", y);
+    if(y != 0){
+        interface->scale += y * 0.1;
+    }
+}
+
 void framebufferSizeCallback(GLFWwindow *w, int width, int height){
-    interface->width = width;
-    interface->height = height;
+    interface->g->width = width;
+    interface->g->height = height;
     interface->screenRatio = (float)width / (float)height;
 }
 
@@ -187,9 +233,9 @@ struct Graphics *graphicsInit(){
 
     glfwSetKeyCallback(window, keyCallback);
     // glfwSetCharCallback(window, characterCallback);
-    // glfwSetCursorPosCallback(window, cursorPosCallback);
-    // glfwSetScrollCallback(window, scrollCallback);
-    // glfwSetMouseButtonCallback(window, mouseButtonCallback);
+    glfwSetCursorPosCallback(window, cursorPosCallback);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
+    glfwSetScrollCallback(window, scrollCallback);
 
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     glfwGetFramebufferSize(window, &g->width, &g->height);
@@ -213,11 +259,13 @@ struct Graphics *graphicsInit(){
     interface->modelShader = graphicsShaderInit();
 
     useShader(interface->shader);
+    shaderGlobalMatUniform = getUniformLocation(interface->shader, "globalMatrix");
     shaderMatUniform = getUniformLocation(interface->shader, "modelMatrix");
     shaderColorUniform = getUniformLocation(interface->shader, "color");
     SET_COLOR(shaderColorUniform, WHITE);
 
     useShader(interface->modelShader);
+    modelShaderGlobalMatUniform = getUniformLocation(interface->shader, "globalMatrix");
     modelShaderMatUniform = getUniformLocation(interface->modelShader, "modelMatrix");
     modelShaderColorUniform = getUniformLocation(interface->shader, "color");
     SET_COLOR(modelShaderColorUniform, WHITE);

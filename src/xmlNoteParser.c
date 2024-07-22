@@ -9,7 +9,7 @@ struct Note *parseNote(xmlNodePtr part, StaffNumber *staveIndex, bool *isChord){
     xmlNodePtr children = part->xmlChildrenNode;
     while(children){
         if(xmlStrcmp(children->name, XML_CHAR"rest") == 0){
-            SET_BIT(note->flags, REST_FLAG);
+            SET_BIT(note->flags, NOTE_FLAG_REST);
         }
         else if(xmlStrcmp(children->name, XML_CHAR"chord") == 0){
             *isChord = true;
@@ -22,6 +22,9 @@ struct Note *parseNote(xmlNodePtr part, StaffNumber *staveIndex, bool *isChord){
         }
         else if(xmlStrcmp(children->name, XML_CHAR"pitch") == 0){
             parsePitch(children, note);
+        }
+        else if(xmlStrcmp(children->name, XML_CHAR"accidental") == 0){
+            parseAccidental(children, note);
         }
         else if(xmlStrcmp(children->name, XML_CHAR"notations") == 0){
             parseNotations(children, note);
@@ -38,7 +41,7 @@ struct Note *parseNote(xmlNodePtr part, StaffNumber *staveIndex, bool *isChord){
         children = children->next;
     }
 
-    // if(GET_BIT(note->flags, REST_FLAG)){
+    // if(GET_BIT(note->flags, NOTE_FLAG_REST)){
     //     printf("new rest\n");
     // }
     // else{
@@ -81,7 +84,7 @@ void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size
             for(size_t j = 0; j < notesVector->size; j++){
                 struct Note *note = notesVector->data[j];
                 // fprintf(stderr, "%p\n", note);
-                if(GET_BIT(note->flags, REST_FLAG) == 0){
+                if(GET_BIT(note->flags, NOTE_FLAG_REST) == 0){
                     lastNote = note;
                     noteCounter++;
                 }
@@ -104,7 +107,7 @@ void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size
 
                 for(size_t j = 0; j < notesVector->size; j++){
                     struct Note *note = notesVector->data[j];
-                    if(GET_BIT(note->flags, REST_FLAG) == 0){
+                    if(GET_BIT(note->flags, NOTE_FLAG_REST) == 0){
                         chord[j] = note;
                     }
                 }
@@ -188,16 +191,6 @@ void parsePitch(xmlNodePtr node, struct Note *note){
             // sharp == 1 #
             // flat == -1 b
             note->pitch.alter = alter;
-            if(alter == 1 || alter == -1){
-                SET_BIT(note->flags, IS_ACCIDENTAL_FLAG);
-                if(alter == -1){
-                    SET_BIT(note->flags, IS_FLAT_FLAG);
-                }
-            }
-            else{
-                fprintf(stderr, "alter == %li not implemented\n", alter);
-                exit(1);
-            }
         }
         // https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/octave/
         else if(xmlStrcmp(children->name, XML_CHAR"octave") == 0){
@@ -207,6 +200,29 @@ void parsePitch(xmlNodePtr node, struct Note *note){
             }
         }
         children = children->next;
+    }
+}
+
+// <accidental>
+// https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/accidental/
+void parseAccidental(xmlNodePtr parent, struct Note *note){
+    xmlNodePtr element = parent->xmlChildrenNode;
+    SET_BIT(note->flags, NOTE_FLAG_ACCIDENTAL);
+    while(element){
+        if(xmlStrcmp(element->name, XML_CHAR"sharp") == 0){
+            SET_BIT(note->flags, NOTE_FLAG_SHARP);
+        }
+        else if(xmlStrcmp(element->name, XML_CHAR"natural") == 0){
+            SET_BIT(note->flags, NOTE_FLAG_NATURAL);
+        }
+        else if(xmlStrcmp(element->name, XML_CHAR"flat") == 0){
+            SET_BIT(note->flags, NOTE_FLAG_FLAT);
+        }
+        // else{
+        //     fprintf(stderr, "accidental == %s not implemented\n", element->name);
+        //     exit(1);
+        // }
+        element = element->next;
     }
 }
 

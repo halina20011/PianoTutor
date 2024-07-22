@@ -13,6 +13,8 @@
 #include <zip.h>
 
 #include "vector.h"
+#include "helpers.h"
+
 #include "xmlTypes.h"
 #include "pianoTypes.h"
 
@@ -67,9 +69,12 @@ struct Attributes{
 #define GET_BIT(variable, bit) (variable & (1 << bit))
 
 enum NoteFlag{
-    REST_FLAG,
-    IS_ACCIDENTAL_FLAG,
-    IS_FLAT_FLAG,
+    NOTE_FLAG_NULL,
+    NOTE_FLAG_REST,
+    NOTE_FLAG_ACCIDENTAL,
+    NOTE_FLAG_SHARP,
+    NOTE_FLAG_NATURAL,
+    NOTE_FLAG_FLAT,
     TIE_FLAG
 };
 
@@ -131,6 +136,7 @@ void notesMagazinePrint(struct NoteVectorPVector *notesVectorMagazine);
 void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size_t measureNoteSize);
 enum NoteType parseNoteType(xmlNodePtr node);
 void parsePitch(xmlNodePtr node, struct Note *note);
+void parseAccidental(xmlNodePtr parent, struct Note *note);
 void parseNotations(xmlNodePtr children, struct Note *note);
 void parseTimeModification(xmlNodePtr parent, struct Note *note);
 void parseBeam(xmlNodePtr parent, Beams *rBeams);

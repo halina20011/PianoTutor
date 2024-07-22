@@ -205,7 +205,7 @@ void printMeasure(struct Measure *measure){
                 }
                 else{
                     struct Note *n = notes->note;
-                    if(GET_BIT(n->flags, REST_FLAG)){
+                    if(GET_BIT(n->flags, NOTE_FLAG_REST)){
                         printf("rest \n");
                     }
                     else{

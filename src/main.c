@@ -20,6 +20,18 @@
 // TODO: use correct tempto from Song struct
 // TODO: create note sheet window
 
+// TODO: add lines under staff
+// TODO: correct division
+// TODO: learnSong
+// TODO: keyboard
+// TODO: pickup measure => strip start and end
+// TODO: repeats
+// TODO: measure number
+// TODO: correct bpm
+// TODO: tuplets
+// TODO: bars
+// TODO: tie
+
 // OPTIONS
 bool printHelp = false;
 char *midiFilePath = NULL, *mxlFilePath = NULL;
@@ -62,6 +74,9 @@ struct InputParser inputParser = {
 };
 
 struct Interface *interface = NULL;
+GLint shaderGlobalMatUniform = 0;
+GLint modelShaderGlobalMatUniform = 0;
+
 GLint shaderMatUniform = 0;
 GLint modelShaderMatUniform = 0;
 
@@ -77,6 +92,8 @@ int main(int argc, char **argv){
     }
     
     interface = calloc(1, sizeof(struct Interface));
+    interface->scale = 1;
+    interface->paused = true;
     
     // TODO: max percisionLevel is 10 ^ 9 so it would fit in uint32_t and float has limited number of fraction
     // uint32_t percision = pow(10, percisionLevel);

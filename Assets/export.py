@@ -89,7 +89,7 @@ class Item:
         file.write(struct.pack(f"{len(self.modelId)}s", self.modelId.encode()));
         file.write(struct.pack("i", len(self.data)));
         file.write(struct.pack(f"{len(self.data)}f", *self.data));
-        print(f"exported {self.name}");
+        print(f"exported {self.name} {len(self.data)}");
 
     def getData(self):
         # Check if the object is a mesh
@@ -134,6 +134,10 @@ def printSelected():
         print(item.data);
 
 def getObjects():
+    models["text"] = {};
+    for i in range(10):
+        models["text"][str(i)] = str(i);
+
     for itemType in models:
         types = models[itemType];
         for modelName in types:
@@ -152,4 +156,4 @@ def exportAll(items):
 getObjects();
 exportAll(items);
 
-# loadFont(57888);
+# loadFont(57623);

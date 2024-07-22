@@ -1,7 +1,12 @@
 #include "piano.h"
 
 #include "interface.h"
+#include <string.h>
 extern struct Interface *interface;
+
+extern GLint shaderGlobalMatUniform;
+extern GLint modelShaderGlobalMatUniform;
+
 extern GLint shaderMatUniform;
 extern GLint modelShaderMatUniform;
 
@@ -24,6 +29,10 @@ VECTOR_TYPE_FUNCTIONS(struct ItemMeasure*, ItemMeasurePVector, "");
 VECTOR_TYPE_FUNCTIONS(struct PressedNote*, PressedNotePVector, "");
 
 uint8_t assignMeshId(char *name){
+    if(strlen(name) == 1){
+        return name[0] - '0' + TEXT_START;
+    }
+
     MATCH("fClef", F_CLEF);
     MATCH("fClef8Up", F_CLEF_8_UP);
     MATCH("fClef15Up", F_CLEF_15_UP);
@@ -64,6 +73,7 @@ uint8_t assignMeshId(char *name){
     MATCH("flag5", FLAG5);
 
     MATCH("sharp", SHARP);
+    MATCH("natural", NATURAL);
     MATCH("flat", FLAT);
 
     fprintf(stderr, "model str id '%s' not found\n", name);
@@ -116,7 +126,6 @@ void loadPianoMeshs(struct Piano *piano){
         fread(modelStrId, sizeof(char), idSize, file);
         modelStrId[idSize] = 0;
         MeshId id = assignMeshId(modelStrId);
-        printf("%s => %i\n", modelStrId, id);
 
         uint32_t size = 0;
         fread(&size, sizeof(uint32_t), 1, file);
@@ -130,6 +139,7 @@ void loadPianoMeshs(struct Piano *piano){
         meshBoundingBox(mbb, data, size);
         
         meshesDataSize[id] = size;
+        printf("%s [%i] => %i\n", modelStrId, size, id);
     }
 
     float *data = malloc(sizeof(float) * dataSize);
@@ -187,6 +197,19 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
 
     float offset = 0 + clearance;
     struct Sheet *sheet = piano->sheet;
+
+    mat4 globMatrix = {};
+    vec3 globScale = {interface->scale, interface->scale, interface->scale};
+    vec3 globPos = {interface->xPos, interface->yPos, 0};
+    glm_mat4_identity(globMatrix);
+    glm_translate(globMatrix, globPos);
+    glm_scale(globMatrix, globScale);
+    useShader(interface->modelShader);
+    glUniformMatrix4fv(modelShaderGlobalMatUniform, 1, GL_FALSE, (float*)globMatrix);
+
+    useShader(interface->shader);
+    glUniformMatrix4fv(shaderGlobalMatUniform, 1, GL_FALSE, (float*)globMatrix);
+
     // size_t s = 0;
     float scale = 0.008;
     vec3 scaleVec = {scale, scale * interface->g->screenRatio, scale};
@@ -201,24 +224,27 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
             struct Item *item = measure->items[i];
             float staffOffset = sheet->staffOffsets[item->staffIndex];
             // printf("%i %f\n", item->staffIndex, staffOffset);
-            uint8_t meshId = item->meshId;
+            enum Meshes meshId = item->meshId;
             // printf("meshId: %i\n", meshId);
             if(item->type == ITEM_MESH){
                 useShader(interface->modelShader);
                 SET_COLOR(modelShaderColorUniform, WHITE);
- 
+
                 bool playedNote = false;
-                for(size_t p = 0; p < pressedNotes->size; p++){
-                    // printf("pn: %p\n", pressedNotes->data[p]);
-                    struct Note *note = pressedNotes->data[p]->note;
-                    if(note->item == item){
-                        // printf("%p == %p\n", note->item, item);
-                        playedNote = true;
-                        SET_COLOR(modelShaderColorUniform, RED);
-                        break;
+                if(item->typeSubGroup == ITEM_GROUP_NOTE_HEAD){
+                    for(size_t p = 0; p < pressedNotes->size; p++){
+                        // printf("pn: %p\n", pressedNotes->data[p]);
+                        struct Note *note = pressedNotes->data[p]->note;
+                        if(note->item == item){
+                            // printf("%p == %p\n", note->item, item);
+                            playedNote = true;
+                            SET_COLOR(modelShaderColorUniform, RED);
+                            break;
+                        }
                     }
                 }
 
+                    // meshId = 95;
                 size_t trigCount = piano->meshesDataSize[meshId] / 3;
                 GLint index = piano->meshesDataStart[meshId] / 3;
                 mat4 mMat = {};
@@ -232,6 +258,9 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
 
                 glUniformMatrix4fv(modelShaderMatUniform, 1, GL_FALSE, (float*)mMat);
 
+                if(item->typeSubGroup == ITEM_GROUP_TEXT){
+                    // printf("text %zu %zu %i\n", piano->meshesDataSize[meshId], index, meshId);
+                }
                 // printf("mesh id: %i %i %zu\n", meshId, index, trigCount);
                 glDrawArrays(GL_TRIANGLES, index, trigCount);
 
@@ -250,6 +279,26 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
                 float y = itemSteam->yStart;
                 useShader(interface->shader);
                 drawLine(x, y, 0, x, y + itemSteam->length, 0);
+                useShader(interface->modelShader);
+            }
+            else if(item->type == ITEM_BEAM){
+                useShader(interface->shader);
+
+                mat4 mMat = {};
+                glm_mat4_identity(mMat);
+                glm_translate(mMat, cursor);
+                glm_scale(mMat, scaleVec);
+                glUniformMatrix4fv(shaderMatUniform, 1, GL_FALSE, (float*)mMat);
+
+                struct ItemBeam *beam = item->data;
+                float x1 = (beam->xStart + offset) * stretch;
+                float y1 = beam->yStart;
+                float x2 = (beam->xEnd   + offset) * stretch;
+                float y2 = beam->yEnd;
+                // printf("%f %f %f %f\n", x1, y1, x2, y2);
+                drawLine(x1, y1, 0, x2, y2, 0);
+                // drawLine(x1, 0, 0, 10, 10, 10);
+
                 useShader(interface->modelShader);
             }
             else{
@@ -311,7 +360,7 @@ void pianoPlaySong(struct Piano *piano, int midiDevice){
     struct Measure **measures = piano->measures;
     size_t measureIndex = 0;
     Division currDivision = -1;
-    float currBmp = 120;
+    float currBmp = 175;
     float prevTime = 0;
     struct Attributes currAttributes = {};
     float divisionTimer = 0;
@@ -320,8 +369,13 @@ void pianoPlaySong(struct Piano *piano, int midiDevice){
 
     updateAttributes(measures[0]->attributes[0], &currAttributes);
     size_t divisionCounter = 0;
-    while(measureIndex < piano->measureSize){
+    while(!glfwWindowShouldClose(interface->g->window) && measureIndex < piano->measureSize){
         drawSheet(piano, pressedNotes);
+        glfwPollEvents();
+
+        if(interface->paused){
+            continue;
+        }
 
         struct Measure *currMeasure = measures[measureIndex];
         float time = glfwGetTime();
@@ -353,7 +407,7 @@ void pianoPlaySong(struct Piano *piano, int midiDevice){
         }
 
         // printf("size: %zu\n", pressedNotes->size);
-        printf("position: %zu %i %f\n", measureIndex, currDivision, divisionDuration);
+        // printf("position: %zu %i %f\n", measureIndex, currDivision, divisionDuration);
 
         // turn off any notes
         for(size_t i = 0; i < pressedNotes->size; ){
@@ -393,7 +447,7 @@ void pianoPlaySong(struct Piano *piano, int midiDevice){
                 }
             }
             else{
-                if(!GET_BIT(notes->note->flags, REST_FLAG)){
+                if(!GET_BIT(notes->note->flags, NOTE_FLAG_REST)){
                     pressNote(notes->note, pressedNotes, divisionCounter, midiDevice);
                 }
             }

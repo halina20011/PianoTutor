@@ -10,7 +10,8 @@
     "in vec3 position;\n"\
     "\n"\
     "uniform mat4 modelMatrix;\n"\
+    "uniform mat4 globalMatrix;\n"\
     "\n"\
     "void main(){\n"\
-    "    gl_Position = modelMatrix * vec4(position, 1.0);\n"\
+    "    gl_Position = globalMatrix * modelMatrix * vec4(position, 1.0);\n"\
     "}\n"

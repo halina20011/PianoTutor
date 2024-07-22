@@ -42,18 +42,18 @@ main: $(OBJECTS)
 # flags = -m /home/mario/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mid
 
 # MXL
+flags = -f /home/mario/Documents/Notes/Megalovania.mxl
+# flags = -f /home/mario/Documents/Notes/Mr_Doctor_Man_-_Palaye_Royale.mxl
 # flags = -f /home/mario/Documents/Notes/ainekuraine.mxl
 # flags = -f /home/mario/Documents/Notes/Bad_Apple_Original_ver.mxl
 # flags = -f /home/mario/Documents/Notes/Giornos_Theme.mxl
 # flags = -f /home/mario/Documents/Notes/HOUSE_OF_WOLVES_-_MY_CHEMICAL_ROMANCE_-_PIANO_ARRANGEMENT.mxl
 # flags = -f /home/mario/Documents/Notes/Life_Eternal__Ghost_Piano_advanced.mxl
-flags = -f /home/mario/Documents/Notes/Megalovania.mxl
 # flags = -f /home/mario/Documents/Notes/Rats.mxl
 # flags = -f /home/mario/Documents/Notes/Pirates_of_The_Caribbean_Medley.mxl
 # flags = -f /home/mario/Documents/Notes/Rats.mxl
 # flags = -f /home/mario/Documents/Notes/Shreksophone__Shrek_and_Donkey.mxl
 # flags = -f /home/mario/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mxl
-# flags = -f /home/mario/Documents/Notes/Mr_Doctor_Man_-_Palaye_Royale.mxl
 # flags = -f /home/mario/Documents/MuseScore4/Scores/test.mxl
 # flags = --help
 # flags += --durations
@@ -72,6 +72,7 @@ viewBitmap: bitmap
 
 shaders: makeShaders.c
 	gcc makeShaders.c -o ./build/makeShaders && ./build/makeShaders | tee src/shaders.h
+	touch ./src/graphics.c
 
 update:
 	rsync -avz --exclude "build/*" ${USER}@192.168.0.248:/home/${USER}/Programming/C/PianoTutor/ ./

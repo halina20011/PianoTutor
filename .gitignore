@@ -3,5 +3,6 @@ build/
 **/*.txt
 Notes/
 Assets/Images
+Assets/Fonts/
 
 **.blend1

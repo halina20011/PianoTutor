@@ -60,9 +60,15 @@ enum Meshes{
     FLAG5,
 
     SHARP,
+    NATURAL,
     FLAT,
 
-    MESHES_SIZE,
+    TEXT_START,
+    TEXT_START1,
+    TEXT_START2,
+    TEXT_START3,
+
+    MESHES_SIZE = TEXT_START + 11,
 };
 
 struct ItemMesh{
@@ -93,12 +99,19 @@ enum ItemType{
     ITEM_STEAM,
     ITEM_BEAM,
     ITEM_FLAG,
-    ITEM_BAR
+    ITEM_BAR,
+};
+
+enum ItemSubGroup{
+    ITEM_GROUP_NULL,
+    ITEM_GROUP_NOTE_HEAD,
+    ITEM_GROUP_TEXT
 };
 
 struct Item{
     enum ItemType type;
     enum Meshes meshId;
+    enum ItemSubGroup typeSubGroup;
     StaffNumber staffIndex;
     void *data;
 };
