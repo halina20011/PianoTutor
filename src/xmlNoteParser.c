@@ -42,31 +42,31 @@ struct Note *parseNote(xmlNodePtr part, StaffNumber *staveIndex, bool *isChord){
     }
 
     // if(GET_BIT(note->flags, NOTE_FLAG_REST)){
-    //     printf("new rest\n");
+    //     debugf("new rest\n");
     // }
     // else{
-    //     printf("new note (%i:%i:%c)\n", note->octave, note->step, note->stepChar);
+    //     debugf("new note (%i:%i:%c)\n", note->octave, note->step, note->stepChar);
     // }
     
     return note;
 }
 
 void notesMagazinePrint(struct NoteVectorPVector *notesVectorMagazine){
-    printf("==== magazine ====\n");
+    debugf("==== magazine ====\n");
     for(size_t i = 0; i < notesVectorMagazine->size; i++){
         struct NotePVector *currNoteVector = notesVectorMagazine->data[i];
-        printf("%p [%zu]: ", currNoteVector, currNoteVector->size);
+        debugf("%p [%zu]: ", currNoteVector, currNoteVector->size);
         for(size_t j = 0; j < currNoteVector->size; j++){
-            printf("%p ", currNoteVector->data[j]);
+            debugf("%p ", currNoteVector->data[j]);
         }
-        printf("\n");
+        debugf("\n");
     }
-    printf("===== mag end ====\n");
+    debugf("===== mag end ====\n");
 }
 
 void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size_t measureNoteSize){
     // notesMagazinePrint(notesVectorMagazine);
-    for(long i = 0; i < measureNoteSize; i++){
+    for(size_t i = 0; i < measureNoteSize; i++){
         // if the magazine is smaller then the buffer or the its empty
         // then the buffer with this index will be set to NULL
         if(notesVectorMagazine->size <= i || notesVectorMagazine->data[i]->size == 0){
@@ -74,7 +74,7 @@ void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size
             // fprintf(stderr, "%li 0\n", i);
         }
         else if(i < notesVectorMagazine->size && 0 < notesVectorMagazine->data[i]->size){
-            // printf("%i m p %p\n", i, notesVectorMagazine->data[i]);
+            // debugf("%i m p %p\n", i, notesVectorMagazine->data[i]);
             struct NotePVector *notesVector = notesVectorMagazine->data[i];
             // fprintf(stderr, "%li %zu\n", i, notesVector->size);
             size_t noteCounter = 0;
@@ -119,7 +119,7 @@ void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size
 
             staff[i] = notes;
 
-            // printf("flushed note's beams %i\n", notes->beams);
+            // debugf("flushed note's beams %i\n", notes->beams);
 
             notesVector->size = 0;
         }
@@ -195,7 +195,7 @@ void parsePitch(xmlNodePtr node, struct Note *note){
         // https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/octave/
         else if(xmlStrcmp(children->name, XML_CHAR"octave") == 0){
             note->pitch.octave = parseBody(children);
-            if(note->pitch.octave < 0 || 9 < note->pitch.octave ){
+            if(9 < note->pitch.octave ){
                 fprintf(stderr, "note's octave must be in range <0;9> you have %i\n", note->pitch.octave);
             }
         }
@@ -206,24 +206,19 @@ void parsePitch(xmlNodePtr node, struct Note *note){
 // <accidental>
 // https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/accidental/
 void parseAccidental(xmlNodePtr parent, struct Note *note){
-    xmlNodePtr element = parent->xmlChildrenNode;
+    xmlChar *body = xmlNodeGetContent(parent);
     SET_BIT(note->flags, NOTE_FLAG_ACCIDENTAL);
-    while(element){
-        if(xmlStrcmp(element->name, XML_CHAR"sharp") == 0){
-            SET_BIT(note->flags, NOTE_FLAG_SHARP);
-        }
-        else if(xmlStrcmp(element->name, XML_CHAR"natural") == 0){
-            SET_BIT(note->flags, NOTE_FLAG_NATURAL);
-        }
-        else if(xmlStrcmp(element->name, XML_CHAR"flat") == 0){
-            SET_BIT(note->flags, NOTE_FLAG_FLAT);
-        }
-        // else{
-        //     fprintf(stderr, "accidental == %s not implemented\n", element->name);
-        //     exit(1);
-        // }
-        element = element->next;
+    if(xmlStrcmp(body, XML_CHAR"sharp") == 0){
+        SET_BIT(note->flags, NOTE_FLAG_SHARP);
     }
+    else if(xmlStrcmp(body, XML_CHAR"natural") == 0){
+        SET_BIT(note->flags, NOTE_FLAG_NATURAL);
+    }
+    else if(xmlStrcmp(body, XML_CHAR"flat") == 0){
+        SET_BIT(note->flags, NOTE_FLAG_FLAT);
+    }
+
+    debugf("accidental: %i\n", note->flags);
 }
 
 void parseNotations(xmlNodePtr parent, struct Note *note){
@@ -268,10 +263,11 @@ void parseBeam(xmlNodePtr parent, Beams *rBeams){
         SET_BIT(beam, BEAM_OFF);
     }
 
-
     bool fHook = (strcmp(body, "forward hook") == 0);
     bool bHook = (strcmp(body, "backward hook") == 0);
     if(fHook || bHook){
+        SET_BIT(beam, BEAM_OFF);
+        
         SET_BIT(beam, BEAM_HOOK_ENABLED);
         if(bHook){
             SET_BIT(beam, BEAM_HOOK_BACKWARD);
@@ -279,4 +275,5 @@ void parseBeam(xmlNodePtr parent, Beams *rBeams){
     }
 
     SET_BEAM(*rBeams, number, beam);
+    // debugf("beam[%i] val: %i => %i\n", number, beam, *rBeams);
 }

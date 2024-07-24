@@ -7,6 +7,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "helpers.h"
+
 #define MAX_FLAG_COUNT   5
 #define MAX_FLAG_LENGTH  20
 #define JOIN_FLAGS_BUFFER (MAX_FLAG_COUNT * (MAX_FLAG_LENGTH + 2))

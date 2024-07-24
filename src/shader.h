@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "helpers.h"
+
 struct Shader{
     GLint program;
     // vertex array object

@@ -5,9 +5,9 @@
 
 #define MIN(a, b) ((a < b) ? a : b)
 
-VECTOR_TYPE_FUNCTIONS(struct Measure*, MeasurePVector, "");
-VECTOR_TYPE_FUNCTIONS(struct Note*, NotePVector, "");
-VECTOR_TYPE_FUNCTIONS(struct NotePVector*, NoteVectorPVector, "");
+VECTOR_TYPE_FUNCTIONS(struct Measure*, MeasurePVector, "%p");
+VECTOR_TYPE_FUNCTIONS(struct Note*, NotePVector, "%p");
+VECTOR_TYPE_FUNCTIONS(struct NotePVector*, NoteVectorPVector, "%p");
 
 // file has to be in dir 0 and to have extension .xml
 bool matchFile(const char *name){
@@ -32,8 +32,8 @@ struct Measure **readNotes(char filePath[], size_t *measureSize){
         exit(1);
     }
 
-    int count = zip_get_num_entries(z, 0);
-    printf("number of files %i\n", count);
+    long count = zip_get_num_entries(z, 0);
+    debugf("number of files %lu\n", count);
     if(count < 0){
         fprintf(stderr, "unable to get number of files in zip\n");
         exit(1);
@@ -49,12 +49,12 @@ struct Measure **readNotes(char filePath[], size_t *measureSize){
         }
 
         const char *fileName = zip_get_name(z, i, 0);
-        printf("file %s\n", fileName);
+        // debugf("file %s\n", fileName);
         if(matchFile(fileName) != true){
         // if(strcmp((char*)fileName, "score.xml") != 0){
             continue;
         }
-        printf("matched file %s\n", fileName);
+        // debugf("matched file %s\n", fileName);
         
         struct zip_file *zf = zip_fopen_index(z, i, 0);
         if(!zf){
@@ -74,17 +74,17 @@ struct Measure **readNotes(char filePath[], size_t *measureSize){
 
         // FILE *notes = fopen("/tmp/notes", "w+");
 
-        // printf("size %i\n", bytesLeft);
+        // debugf("size %i\n", bytesLeft);
         while(0 < bytesLeft){
             zip_int64_t bytesToRead = MIN(CHUNK_SIZE, bytesLeft);
             zip_int64_t bytesRead = zip_fread(zf, buffer, bytesToRead);
             if(bytesRead < 0){
-                printf("failed to read data from file %s in zip\n", fileName);
+                debugf("failed to read data from file %s in zip\n", fileName);
                 exit(1);
             }
             bytesWritten += bytesRead;
             bytesLeft -= bytesRead;
-            // printf("bytes read: %i left: %i\n", bytesRead, bytesLeft);
+            // debugf("bytes read: %i left: %i\n", bytesRead, bytesLeft);
             
             // fwrite(buffer, sizeof(char), bytesRead, notes);
 
@@ -103,7 +103,7 @@ struct Measure **readNotes(char filePath[], size_t *measureSize){
             exit(1);
         }
 
-        printf("parsed ok\n");
+        debugf("notes parsed successfully\n");
     }
 
     xmlNode *root = xmlDocGetRootElement(doc);
@@ -126,18 +126,19 @@ struct Measure **readNotes(char filePath[], size_t *measureSize){
 }
 
 long parseBody(xmlNodePtr part){
-    // printf("parsing body\n");
+    // debugf("parsing body\n");
     xmlChar *content = xmlNodeGetContent(part);
     long r = strtol((char*)content, NULL, 10);
-    // printf("end parsing body\n");
+    // debugf("end parsing body\n");
     return r;
 }
 
 long parseProp(xmlNodePtr note, char *name){
-    char *prop = (char*)xmlGetProp(note, XML_CHAR"number");
+    char *prop = (char*)xmlGetProp(note, XML_CHAR name);
     if(!prop){
         return 0;
     }
+
     return strtol(prop, NULL, 10);
 }
 
@@ -148,11 +149,9 @@ uint16_t getMeasureNotesSize(xmlNodePtr note, struct Attributes *currAtrributes,
     long staves = 0;
     bool set = false;
     while(children){
-        printf("    %s\n", children->name);
         if(xmlStrcmp(children->name, XML_CHAR"divisions") == 0){
             set = true;
             division = parseBody(children);
-            printf("division: %li\n", division);
         }
         else if(xmlStrcmp(children->name, XML_CHAR"time") == 0){
             set = true;
@@ -173,7 +172,7 @@ uint16_t getMeasureNotesSize(xmlNodePtr note, struct Attributes *currAtrributes,
             denominator = currAtrributes->denominator;
         }
         
-        printf("division: %li, denominator: %i\n", division, denominator);
+        debugf("division: %li, denominator: %i\n", division, denominator);
         *measureSize = division * denominator;
     }
 
@@ -189,6 +188,7 @@ void printMeasure(struct Measure *measure){
     // for every staff in the measure
     for(StaffNumber staffIndex = 0; staffIndex < measure->stavesNumber; staffIndex++){
         Staff staff = measure->staffs[staffIndex];
+        debugf("\n");
         printf("staff[%i]\n", staffIndex);
         // for every buffer place in staff
         for(size_t measureNoteIndex = 0; measureNoteIndex < measure->measureSize; measureNoteIndex++){
@@ -215,13 +215,13 @@ void printMeasure(struct Measure *measure){
             }
         }
     }
-    printf("\n");
+    debugf("\n");
 }
 
 void printMeasures(struct MeasurePVector *measuresVector){
     // for every measure
     for(size_t i = 0; i < measuresVector->size; i++){
-        printf("measure[%zu]\n", i);
+        debugf("measure[%zu]\n", i);
         struct Measure *measure = measuresVector->data[i];
         printMeasure(measure);
     }
@@ -239,6 +239,7 @@ struct Measure **parseMeasures(xmlNodePtr part, size_t *measureSize){
     struct NoteVectorPVector *notesVectorMagazine = NoteVectorPVectorInit();
 
     struct Attributes *currAtrributes = attributesInit();
+    // while(children && !measuresVector->size){
     while(children){
         if(xmlStrcmp(children->name, XML_CHAR"measure") == 0){
             struct Measure *m = parseMeasure(children, notesVectorMagazine, currAtrributes);
@@ -258,7 +259,7 @@ struct Measure **parseMeasures(xmlNodePtr part, size_t *measureSize){
 
 struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notesVectorMagazine, struct Attributes *currAtrributes){
     long measureNumber = parseProp(measure, "number");
-    printf("measure number: %li\n", measureNumber);
+    debugf("measure number: %li\n", measureNumber);
     struct Measure *m = malloc(sizeof(struct Measure));
     m->attributes = NULL;
     m->staffs = NULL;
@@ -290,7 +291,7 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
     }
 
     children = measure->xmlChildrenNode;
-    printf("staffNumber: %i measureSize: %i attributes: %li\n", staffNumber, measureSize, numberOfAttributes);
+    debugf("staffNumber: %i measureSize: %i attributes: %li\n", staffNumber, measureSize, numberOfAttributes);
 
     struct Attributes **attributes = NULL;
     Staff *staffs = malloc(sizeof(Staff*) * staffNumber);
@@ -304,7 +305,7 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
         attributes = calloc(measureSize, sizeof(struct Attributes*));
     }
 
-    long currTime = 0;
+    size_t currTime = 0;
 
     StaffNumber staveIndex = 0, prevStaveIndex = 0;
     while(children){
@@ -317,13 +318,12 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
             struct Note *note = parseNote(children, &staveIndex, &isChord);
             
             if(isChord){
+                if(currTime < note->duration){
+                    fprintf(stderr, "error currTime is negative\n");
+                    exit(1);
+                }
+                
                 currTime -= note->duration;
-            }
-            
-            // printf("sizes: %zu %li\n", notesVectorMagazine->size, currTime);
-            if(currTime < 0){
-                fprintf(stderr, "error currTime is negative\n");
-                exit(1);
             }
 
             while(notesVectorMagazine->size <= currTime){
@@ -332,8 +332,8 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
             }
 
             if(prevStaveIndex != staveIndex){
-                // printf("stave %i %i\n", prevStaveIndex, staveIndex);
-                // printf("staff %p\n", staffs[prevStaveIndex]);
+                // debugf("stave %i %i\n", prevStaveIndex, staveIndex);
+                // debugf("staff %p\n", staffs[prevStaveIndex]);
                 flushNotes(staffs[prevStaveIndex], notesVectorMagazine, measureSize);
                 prevStaveIndex = staveIndex;
             }
@@ -345,13 +345,19 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
             currTime += note->duration;
         }
         else if(xmlStrcmp(children->name, XML_CHAR"backup") == 0){
-            long backup = parseBody(children);
+            size_t backup = parseBody(children);
+
+            if(currTime < backup){
+                fprintf(stderr, "error currTime is negative\n");
+                exit(1);
+            }
+
             currTime -= backup;
         }
         children = children->next;
     }
 
-    // printf("staff %p %i\n", staffs[staveIndex], staveIndex);
+    // debugf("staff %p %i\n", staffs[staveIndex], staveIndex);
     flushNotes(staffs[staveIndex], notesVectorMagazine, measureSize);
 
     // for(size_t i = 0; i < measureSize; i++){

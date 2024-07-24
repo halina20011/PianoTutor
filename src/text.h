@@ -24,6 +24,8 @@
 #include "./shader.h"
 #include "./shaders.h"
 
+#include "helpers.h"
+
 #define ASCII_TABLE_SIZE ((1 << 8) - 1)
 
 struct TextInfo{

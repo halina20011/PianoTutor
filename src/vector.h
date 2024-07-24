@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "helpers.h"
+
 #define VECTOR_TYPE_FUNCTIONS(type, name, format)\
     struct name *name ## Init(){\
         struct name *v = malloc(sizeof(struct name));\

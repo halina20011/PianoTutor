@@ -9,6 +9,8 @@
 #include <glob.h>
 #include <stdint.h>
 
+#include "helpers.h"
+
 #include "xmlParser.h"
 
 #define NOTE_ON  0x90

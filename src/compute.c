@@ -13,25 +13,23 @@ struct NotePitch flats[7] = {P(6, 4), P(2, 5), P(5, 4), P(1, 5), P(4, 4), P(0, 5
 float positionFromCenter(enum Clef clef, struct NotePitch *notePitch){
     Pitch pitch = TO_PITCH_P(notePitch);
     Pitch center = 0;
-    if(G_CLEF_15_UP <= clef && clef <= G_CLEF_15_DOWN){
+    if(CLEF_G_15_UP <= clef && clef <= CLEF_G_15_DOWN){
         // center h, 4 => 6, 4
         struct NotePitch centerPitch = {6, 4, 0, 0};
-        center = TO_PITCH(centerPitch) + (G_CLEF - clef) * 8;
-        // center = 4 * 8 + 4 + (G_CLEF - clef) * 8;
+        center = TO_PITCH(centerPitch) + (uint8_t)(G_CLEF - clef) * 8;
     }
-    else if(F_CLEF_15_UP <= clef && clef <= F_CLEF_15_DOWN){
+    else if(CLEF_F_15_UP <= clef && clef <= CLEF_F_15_DOWN){
         // center d, 3 => 2, 3
         struct NotePitch centerPitch = {2, 3, 0, 0};
-        center = TO_PITCH(centerPitch) + (F_CLEF - clef) * 8;
-        // center = 3 * 8 + 2 + (F_CLEF - clef) * 8;
+        center = TO_PITCH(centerPitch) + (uint8_t)(F_CLEF - clef) * 8;
     }
     else{
         fprintf(stderr, "clef %i not implemented\n", clef);
         exit(1);
     }
 
-    int8_t p = center - pitch;
-    // printf("center %i[%i] - %i => %i\n", pitch, clef, center, p);
+    int8_t p = (int8_t)(pitch - center);
+    // debugf("center %i[%i] - %i => %i\n", pitch, clef, center, p);
 
     return p;
 }
@@ -41,6 +39,7 @@ enum Meshes getAccidental(struct Note *note){
         return MESH_NULL;
     }
     
+    debugf("flags %i\n", note->flags);
     if(GET_BIT(note->flags, NOTE_FLAG_SHARP)){
         return SHARP;
     }
@@ -49,7 +48,12 @@ enum Meshes getAccidental(struct Note *note){
         return NATURAL;
     }
     
-    return FLAT;
+    if(GET_BIT(note->flags, NOTE_FLAG_FLAT)){
+        return FLAT;
+    }
+
+    fprintf(stderr, "missing accidental value\n");
+    exit(1);
 }
 
 void calculateAccidentalOffset(Staff *staffs, StaffNumber staffSize, Division d, float *accidentalOffset){
@@ -107,16 +111,16 @@ struct Item *itemMeshInit(enum Meshes meshId, StaffNumber staffIndex, float xPos
     return item;
 }
 
-struct Item *itemStreamInit(StaffNumber staffIndex, float xPosition, float yPosition, float height){
+struct Item *itemStreamInit(StaffNumber staffIndex, float xPosition, float y1, float y2){
     struct ItemSteam *itemSteam = malloc(sizeof(struct ItemSteam));
     itemSteam->xStart = xPosition;
-    itemSteam->yStart = yPosition;
-    itemSteam->length = height;
+    itemSteam->y1 = y1;
+    itemSteam->y2 = y2;
     return itemInit(ITEM_STEAM, MESH_NULL, staffIndex, itemSteam);
 }
 
 struct Item *itemBeamInit(StaffNumber staffIndex, float x1, float x2, float yPosition){
-    struct ItemBeam *itemBeam = malloc(sizeof(struct ItemSteam));
+    struct ItemBeam *itemBeam = malloc(sizeof(struct ItemBeam));
     
     itemBeam->xStart = x1;
     itemBeam->yStart = yPosition;
@@ -141,7 +145,7 @@ void computeNumber(struct ItemPVector *itemVector, uint8_t n, float x, float y, 
 
     for(uint8_t i = numSize; 0 < i; i--){
         enum Meshes meshId = num[i - 1] + TEXT_START;
-        printf("added %i %i %i\n", meshId, num[i - 1], TEXT_START);
+        debugf("added %i %i %i\n", meshId, num[i - 1], TEXT_START);
         struct Item *item = itemMeshInit(meshId, 0, x + offset, y);
         item->typeSubGroup = ITEM_GROUP_TEXT;
         offset += MBB_MAX(meshId)[0] * 1.1f;
@@ -149,7 +153,7 @@ void computeNumber(struct ItemPVector *itemVector, uint8_t n, float x, float y, 
     }
 }
 
-void computeKeySignature(struct Piano *piano, enum Clef *clefs, KeySignature keySignature, struct ItemPVector *itemsVector, StaffNumber staffNumber, float *offset){
+void computeKeySignature(KeySignature keySignature, struct ItemPVector *itemsVector, StaffNumber staffNumber, float *offset){
     if(!keySignature){
         return;
     }
@@ -157,7 +161,7 @@ void computeKeySignature(struct Piano *piano, enum Clef *clefs, KeySignature key
     struct NotePitch *keySignatureArray = sharp;
     uint8_t meshId = SHARP;
     if(keySignature < 0){
-        keySignature = abs(keySignature);
+        keySignature = ABS(keySignature);
         keySignatureArray = flats;
         meshId = FLAT;
     }
@@ -176,24 +180,23 @@ void computeKeySignature(struct Piano *piano, enum Clef *clefs, KeySignature key
             item->data = iM;
             // iM->yPosition = 0;
             iM->yPosition = positionFromCenter(CLEF_G, &keySignatureArray[i]);
-            printf("acc pos %f\n", iM->yPosition);
             ItemPVectorPush(itemsVector, item);
-            // printf("added %zu\n", itemsVector->size);
+            // debugf("added %zu\n", itemsVector->size);
         }
     }
 
     *offset += currOffset;
-    // printf("%f %i\n", currOffset, keySignature);
+    // debugf("%f %i\n", currOffset, keySignature);
 }
 
-void computeTimeSignature(struct Piano *piano, struct Attributes *attributes, struct ItemPVector *itemsVector, StaffNumber staffNumber, float *offset){
+void computeTimeSignature(struct Attributes *attributes, struct ItemPVector *itemsVector, StaffNumber staffNumber, float *offset){
     float maxOffset = 0;
     for(StaffNumber s = 0; s < staffNumber; s++){
         uint8_t n = attributes->numerator + TIME_0;
         uint8_t d = attributes->denominator + TIME_0;
         ItemPVectorPush(itemsVector, itemMeshInit(n, s, *offset, 0));
         float yOffset = MBB_MAX(d)[1];
-        ItemPVectorPush(itemsVector, itemMeshInit(n, s, *offset, yOffset));
+        ItemPVectorPush(itemsVector, itemMeshInit(n, s, *offset, -yOffset));
         maxOffset = MAX(maxOffset, MAX(MBB_MAX(n)[0], MBB_MAX(d)[0]));
     }
 
@@ -232,7 +235,7 @@ enum NoteType noteDurationToType(struct Note *note, struct Attributes *currAttri
     float durationInQuaterNotes = (float)d / (float)currAttributes->division;
 
     uint8_t powIndex = log2(durationInQuaterNotes);
-    printf("dur %i[%i] => %i pow: %i\n", note->duration, note->dots, d, powIndex);
+    // debugf("dur %i[%i] => %i pow: %i\n", note->duration, note->dots, d, powIndex);
 
     return NOTE_TYPE_QUARTER - powIndex;
 }
@@ -303,20 +306,21 @@ enum Meshes noteFlag(struct Note *note){
 
 
 // void computeNote(struct Note *note, enum Clef clef, struct ItemPVector *itemVector, float offset, struct Attributes *currAttributes, NotePitchExtreme *notePitchExtremes){
-void computeNote(struct ItemPVector *itemVector, struct Attributes *currAttributes, struct Note *note, NotePitchExtreme *notePitchExtremes, enum Clef clef, StaffNumber staffIndex, float *offset, float accidentalOffset){
+void computeNote(struct ItemPVector *itemVector, struct Attributes *currAttributes, struct Note *note, NotePitchExtreme *notePitchExtremes, enum Clef clef, StaffNumber staffIndex, float offset, float accidentalOffset){
     float y = (GET_BIT(note->flags, NOTE_FLAG_REST)) ? 0 : positionFromCenter(clef, &note->pitch);
 
     if(GET_BIT(note->flags, NOTE_FLAG_ACCIDENTAL)){
         enum Meshes meshId = getAccidental(note);
-        struct Item *item = itemMeshInit(meshId, staffIndex, *offset, y);
+        debugf("accidental meshid: %i\n", meshId);
+        // enum Meshes meshId = NATURAL;
+        struct Item *item = itemMeshInit(meshId, staffIndex, offset, y);
         note->item = item;
         ItemPVectorPush(itemVector, item);
-        // *accidentalOffset = MAX(*accidentalOffset, MBB_MAX(meshId)[0]);
     }
 
     if(note->noteType == NOTE_TYPE_NULL){
         note->noteType = noteDurationToType(note, currAttributes);
-        printf("calculated note type: %i\n", note->noteType);
+        debugf("calculated note type: %i\n", note->noteType);
     }
 
     Pitch c = TO_PITCH(note->pitch);
@@ -324,17 +328,13 @@ void computeNote(struct ItemPVector *itemVector, struct Attributes *currAttribut
     notePitchExtremes[staffIndex][1] = MAX(y, c);
 
     enum Meshes meshId = (GET_BIT(note->flags, NOTE_FLAG_REST)) ? noteRest(note) : noteHead(note);
-    struct Item *item = itemMeshInit(meshId, staffIndex, *offset + accidentalOffset, y);
+    struct Item *item = itemMeshInit(meshId, staffIndex, offset + accidentalOffset, y);
     item->typeSubGroup = ITEM_GROUP_NOTE_HEAD;
     note->item = item;
     ItemPVectorPush(itemVector, item);
 }
 
-// uint8_t noteSteam(n){
-//
-// }
-
-void computeNotes(struct ItemPVector *itemVector, struct Attributes *currAttributes, struct Notes *notes, NotePitchExtreme *notePitchExtremes, enum Clef clef, StaffNumber staffIndex, float *offset, float accidentalOffset){
+void computeNotes(struct ItemPVector *itemVector, struct Attributes *currAttributes, struct Notes *notes, NotePitchExtreme *notePitchExtremes, enum Clef clef, StaffNumber staffIndex, float offset, float accidentalOffset){
     float min = 0, max = 0;
     notesUpdateExtremes(notes, clef, &min, &max);
     
@@ -348,25 +348,27 @@ void computeNotes(struct ItemPVector *itemVector, struct Attributes *currAttribu
         computeNote(itemVector, currAttributes, notes->note, notePitchExtremes, clef, staffIndex, offset, accidentalOffset);
     }
 
-    float extreme = 0;
-    NOTE_EXTREME(extreme, min, max);
     struct Note *note = (notes->chordSize) ? notes->chord[0] : notes->note;
-    // printf("beams: %i\n", notes->beams);
+    // debugf("beams: %i\n", notes->beams);
     if(GET_BIT(note->flags, NOTE_FLAG_REST) == 0 && notes->beams == 0 && NOTE_TYPE_HALF <= note->noteType){
         if(note->noteType < NOTE_TYPE_EIGHTH){
             return;
         }
 
-        // TODO: chords with dirrerent notes durations
-        // add note steam
-        float y = -positionFromCenter(clef, &note->pitch);
+        float closestBeamHeight;
+        bool side;
+        steamPositions(&closestBeamHeight, &side, min, max);
+        
+        float sign = (side == BEAM_UPPER_SIDE) ? 1 : -1;
+        float beamYPosition = closestBeamHeight + BEAM_NOTE_HEAD_OFFSET * sign;
 
-        float length = 6.f;
-        float noteBodyOffset = 1;
-        if(extreme < 0){
-            length = -6.0f;
-        }
-        ItemPVectorPush(itemVector, itemStreamInit(staffIndex, *offset + noteBodyOffset, y, length));
+        float beamOffet = (side == BEAM_UPPER_SIDE) ? 1 : 0; 
+        // float noteWidth
+        // struct Note *note = (notes->chordSize) ? notes->chord[0] : notes->note;
+        // return MBB_MAX(note->item->meshId)[0];
+
+        // TODO: chords with dirrerent notes durations
+        addBeamSteam(notes, clef, staffIndex, itemVector, offset + accidentalOffset + beamOffet, beamYPosition);
 
         // if(FLAG1 <= meshId && meshId <= FLAG5){
         //     enum Meshes meshId = noteFlag(note);
@@ -376,15 +378,6 @@ void computeNotes(struct ItemPVector *itemVector, struct Attributes *currAttribu
     }
 }
 
-void notesUpdateBeamDepth(struct Notes *notes, uint8_t *maxBeamDepth){
-    uint8_t beam = *maxBeamDepth;
-    while(GET_BEAM(notes->beams, beam + 1)){
-        beam++;
-    }
-
-    *maxBeamDepth = beam;
-}
-
 void notesUpdateExtremes(struct Notes *notes, enum Clef clef, float *rMin, float *rMax){
     float min = *rMin, max = *rMax;
     if(notes->chordSize){
@@ -392,101 +385,24 @@ void notesUpdateExtremes(struct Notes *notes, enum Clef clef, float *rMin, float
             float y = positionFromCenter(clef, &notes->chord[i]->pitch);
             min = MIN(min, y);
             max = MAX(max, y);
+            // debugf("%f => min %f max %f\n", y, min, max);
         }
     }
     else{
         float y = positionFromCenter(clef, &notes->note->pitch);
         min = MIN(min, y);
         max = MAX(max, y);
+        // debugf("%f => min %f max %f\n", y, min, max);
     }
 
     *rMin = min;
     *rMax = max;
 }
 
-// --------
-// ---- ---
-// - -  
-void addBeams(Staff staff, struct ItemPVector *itemVector, float *notesPositions, Division left, Division end, float y, float offset, uint8_t beamDepth){
-    float leftPos = notesPositions[left];
-    float rightPos = notesPositions[end];
-    struct Item *item = itemBeamInit(0, leftPos, rightPos, y);
-    // struct Item *item = itemBeamInit(0, leftPos, rightPos, 0);
-    ItemPVectorPush(itemVector, item);
-    // while(left <= end){
-    //     struct Notes *note = staff[left];
-    //     float leftPos = notesPositions[left];
-    //     // Beam startBeam = GET_BEAM(note->beams, beamDepth);
-    //     Division right = left;
-    //     while(right < end){
-    //         if(note){
-    //             Beam beam = GET_BEAM(note->beams, beamDepth);
-    //             if(!beam){
-    //                 break;
-    //             }
-    //         }
-    //         right++;
-    //     }
-    //
-    //     if(left != right){
-    //         float rightPos = notesPositions[right];
-    //         struct Item *item = itemBeamInit(0, leftPos, rightPos, y);
-    //         ItemPVectorPush(itemVector, item);
-    //     }
-    //     // else{
-    //     //     
-    //     // }
-    //     left = right + 1;
-    // }
-}
-
-void computeBeam(struct Measure *measure, StaffNumber staffIndex, struct Attributes *currAttributes, struct ItemPVector *itemVector, float *notesPositions){
-    Staff staff = measure->staffs[staffIndex];
-    float min = 0, max = 0;
-    
-    uint8_t maxBeamDepth = 0;
-
-    Division beamWidth = 0;
-    
-    Division left = 0;
-    Division right = 0;
-    while(right < currAttributes->division){
-        struct Notes *notes = staff[right];
-        enum Clef clef = currAttributes->clefs[staffIndex];
-        // if the notes have beam increase the pointer
-        if(notes && notes->beams){
-            notesUpdateExtremes(notes, clef, &min, &max);
-            notesUpdateBeamDepth(notes, &maxBeamDepth);
-
-            beamWidth++;
-        }
-        printf("%f %f\n", min, max);
-        
-        // there are some beams
-        //  - this note the beams ends 
-        //  or 
-        //  -| is this the last note in measure
-        if(beamWidth && ((notes && !notes->beams) || currAttributes->division == right - 1)){
-            float extreme = (fabsf(min) < max) ? max: min;
-            float sign = (0 < extreme) ? 1.0f : -1.0f;
-            float beamsHeihgt = (BEAM_HEIGHT * maxBeamDepth) + BEAM_HEIGHT_OFFSET * (maxBeamDepth - 1);
-            float beamYPos = (extreme + beamsHeihgt) * sign;
-            printf("%f %f %f %f\n", extreme, sign, beamsHeihgt, beamYPos);
-            printf("beam[%i]: %i --- %i\n", maxBeamDepth, left, right);
-            addBeams(staff, itemVector, notesPositions, left, right, beamYPos, beamsHeihgt, 0);
-            left = right;
-            min = 0;
-            max = 0;
-            beamWidth = 0;
-        }
-
-        right++;
-    }
-}
-
 float computeMeasure(struct Piano *piano, size_t measureIndex, struct ItemPVector *itemVector, struct Attributes *currAttributes, NotePitchExtreme *notePitchExtremes){
     struct Measure *measure = piano->measures[measureIndex];
-    printf("measure %zu\n", measureIndex);
+    printf("\n\n");
+    debugf("COMPUTING MEASURE %zu\n", measureIndex);
     printMeasure(measure);
     StaffNumber staffNumber = piano->measures[0]->attributes[0]->stavesNumber;
     // StaffNumber staffNumber = piano->sheet->staffNumber;
@@ -495,14 +411,14 @@ float computeMeasure(struct Piano *piano, size_t measureIndex, struct ItemPVecto
     MeasureSize measureSize = measure->measureSize;
     
     float notesPositions[measureSize];
-    memset(notesPositions, 0, sizeof(float) * measureSize);
-    
-    computeNumber(itemVector, measure->sheetMeasureIndex, 0, -8, 0.5);
+    memset(notesPositions, 0, measureSize * sizeof(float));
+
+    computeNumber(itemVector, measure->sheetMeasureIndex, 0, 8, 0.5);
 
     // for every item in measure
     for(Division d = 0; d < measureSize; d++){
         // void *aP = (measure->attributes) ? measure->attributes[d] : NULL;
-        // printf("division %i attributes: %p\n", d, aP);
+        // debugf("division %i attributes: %p\n", d, aP);
 
         // attributes are only 1d array
         if(measure->attributes && measure->attributes[d]){
@@ -530,11 +446,11 @@ float computeMeasure(struct Piano *piano, size_t measureIndex, struct ItemPVecto
             }
 
             if(attributes->keySignature){
-                computeKeySignature(piano, currAttributes->clefs, currAttributes->keySignature, itemVector, staffNumber, &offset);
+                computeKeySignature(currAttributes->keySignature, itemVector, staffNumber, &offset);
             }
 
             if(attributes->numerator || attributes->denominator){
-                computeTimeSignature(piano, attributes, itemVector, staffNumber, &offset);
+                computeTimeSignature(attributes, itemVector, staffNumber, &offset);
             }
         }
 
@@ -547,18 +463,17 @@ float computeMeasure(struct Piano *piano, size_t measureIndex, struct ItemPVecto
             Staff staff = measure->staffs[s];
             struct Notes *notes = staff[d];
             if(notes){
-                computeNotes(itemVector, currAttributes, notes, notePitchExtremes, currAttributes->clefs[s], s, &offset, accidentalOffset);
+                computeNotes(itemVector, currAttributes, notes, notePitchExtremes, currAttributes->clefs[s], s, offset, accidentalOffset);   
             }
         }
 
         notesPositions[d] = offset + accidentalOffset;
-
-        offset += accidentalOffset + 1.0f ;
+        offset += accidentalOffset + 1.0f;
     }
 
     // add beams for every staff
     for(StaffNumber s = 0; s < staffNumber; s++){
-        computeBeam(measure, s, currAttributes, itemVector, notesPositions);
+        computeBeams(measure, s, currAttributes, itemVector, notesPositions);
     }
 
     return offset;
@@ -577,7 +492,7 @@ void computeMeasures(struct Piano *piano){
 
     StaffNumber staffNumber = piano->measures[0]->attributes[0]->stavesNumber;
     NotePitchExtreme *notePitchExtremes = calloc(staffNumber, sizeof(NotePitchExtreme));
-    printf("staff number: %i\n", staffNumber);
+    debugf("staff number: %i\n", staffNumber);
 
     for(size_t i = 0; i < piano->measureSize; i++){
     // for(size_t i = 0; i < 1; i++){
@@ -610,7 +525,7 @@ void computeMeasures(struct Piano *piano){
         float c1 = MAX(notePitchExtremes[s - 1][0], 4.5f + 4.0f);
         float c2 = MAX(notePitchExtremes[s][1], 4.5f + 4.0f);
         staffOffsets[s] = staffOffsets[s - 1] + (c1 + c2);
-        printf("staff %i offset %f %f => %f\n", s, c1, c2, staffOffsets[s]);
+        debugf("staff %i offset %f %f => %f\n", s, c1, c2, staffOffsets[s]);
     }
 
     struct Sheet *sheet = malloc(sizeof(struct Sheet));

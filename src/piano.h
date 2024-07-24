@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "vector.h"
+#include "helpers.h"
 
 #include "pianoTypes.h"
 #include "xmlParser.h"

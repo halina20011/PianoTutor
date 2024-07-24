@@ -13,10 +13,9 @@
 // void test(uint8_t *data){
 //     uint32_t i = 0;
 //     uint32_t r = variableLengthValue(data, &i);
-//     printf("%X %u\n", r, r);
+//     debugf("%X %u\n", r, r);
 // }
 
-// TODO: correct track numbers
 // TODO: use correct tempto from Song struct
 // TODO: create note sheet window
 
@@ -115,7 +114,12 @@ int main(int argc, char **argv){
     struct Measure **measures = readNotes(mxlFilePath, &measuresSize);
 
     struct Piano *piano = pianoInit(measures, measuresSize);
+
+    // piano->measureSize = 3;
+    computeMeasures(piano);
+
     int midiDevice = midiDeviceInit("auto");
+    // int midiDevice = -1;
     // while(!glfwWindowShouldClose(interface->g->window)){
     //     drawSheet(piano);
     //     // exit(1);

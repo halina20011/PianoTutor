@@ -21,12 +21,12 @@ struct MeshBoundingBox *meshBoundingBoxes;
     } \
 }
 
-VECTOR_TYPE_FUNCTIONS(size_t, SizeVector, "");
-VECTOR_TYPE_FUNCTIONS(struct Item*, ItemPVector, "");
-VECTOR_TYPE_FUNCTIONS(struct Item**, ItemPPVector, "");
-VECTOR_TYPE_FUNCTIONS(struct ItemMeasure*, ItemMeasurePVector, "");
+VECTOR_TYPE_FUNCTIONS(size_t, SizeVector, "%zu");
+VECTOR_TYPE_FUNCTIONS(struct Item*, ItemPVector, "%p");
+VECTOR_TYPE_FUNCTIONS(struct Item**, ItemPPVector, "%p");
+VECTOR_TYPE_FUNCTIONS(struct ItemMeasure*, ItemMeasurePVector, "%p");
 
-VECTOR_TYPE_FUNCTIONS(struct PressedNote*, PressedNotePVector, "");
+VECTOR_TYPE_FUNCTIONS(struct PressedNote*, PressedNotePVector, "%p");
 
 uint8_t assignMeshId(char *name){
     if(strlen(name) == 1){
@@ -118,7 +118,7 @@ void loadPianoMeshs(struct Piano *piano){
     fread(&numberOfMeshes, sizeof(uint32_t), 1, file);
 
     for(size_t i = 0; i < numberOfMeshes; i++){
-        // printf("file pos: %i\n", ftell(file));
+        // debugf("file pos: %i\n", ftell(file));
         MeshStrIdSize idSize;
         fread(&idSize, sizeof(MeshStrIdSize), 1, file);
 
@@ -139,30 +139,30 @@ void loadPianoMeshs(struct Piano *piano){
         meshBoundingBox(mbb, data, size);
         
         meshesDataSize[id] = size;
-        printf("%s [%i] => %i\n", modelStrId, size, id);
+        // debugf("%s [%i] => %i\n", modelStrId, size, id);
     }
 
     float *data = malloc(sizeof(float) * dataSize);
-    // printf("dataSize: %zu\n", dataSize);
+    // debugf("dataSize: %zu\n", dataSize);
     size_t dataPointer = 0;
 
     meshesDataStart[0] = 0;
     for(size_t i = 1; i < MESHES_SIZE; i++){
         if(meshesDataSize[i]){
-            // printf("dataSize: %zu %p\n", meshesDataSize[i], dataArray[i]);
+            // debugf("dataSize: %zu %p\n", meshesDataSize[i], dataArray[i]);
             memcpy(&data[dataPointer], dataArray[i], sizeof(float) * meshesDataSize[i]);
             dataPointer += meshesDataSize[i];
-            // printf("dataPointer: %zu\n", dataPointer);
+            // debugf("dataPointer: %zu\n", dataPointer);
         }
 
         if(i - 1){
             meshesDataStart[i] = meshesDataStart[i - 1] + meshesDataSize[i - 1];
-            // printf("data start %zu\n", meshesDataStart[i]);
+            // debugf("data start %zu\n", meshesDataStart[i]);
         }
     }
 
     // for(size_t i = 0; i < 12; i += 3){
-    //     printf("%f %f %f\n", data[i], data[i + 1], data[i + 2]);
+    //     debugf("%f %f %f\n", data[i], data[i + 1], data[i + 2]);
     // }
     useShader(interface->modelShader);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * dataSize, data, GL_STATIC_DRAW);
@@ -183,8 +183,6 @@ struct Piano *pianoInit(struct Measure **measures, size_t measureSize){
 
     piano->measures = measures;
     piano->measureSize = measureSize;
-
-    computeMeasures(piano);
 
     return piano;
 }
@@ -223,9 +221,9 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
         for(size_t i = 0; i < itemsSize; i++){
             struct Item *item = measure->items[i];
             float staffOffset = sheet->staffOffsets[item->staffIndex];
-            // printf("%i %f\n", item->staffIndex, staffOffset);
+            // debugf("%i %f\n", item->staffIndex, staffOffset);
             enum Meshes meshId = item->meshId;
-            // printf("meshId: %i\n", meshId);
+            // debugf("meshId: %i\n", meshId);
             if(item->type == ITEM_MESH){
                 useShader(interface->modelShader);
                 SET_COLOR(modelShaderColorUniform, WHITE);
@@ -233,10 +231,10 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
                 bool playedNote = false;
                 if(item->typeSubGroup == ITEM_GROUP_NOTE_HEAD){
                     for(size_t p = 0; p < pressedNotes->size; p++){
-                        // printf("pn: %p\n", pressedNotes->data[p]);
+                        // debugf("pn: %p\n", pressedNotes->data[p]);
                         struct Note *note = pressedNotes->data[p]->note;
                         if(note->item == item){
-                            // printf("%p == %p\n", note->item, item);
+                            // debugf("%p == %p\n", note->item, item);
                             playedNote = true;
                             SET_COLOR(modelShaderColorUniform, RED);
                             break;
@@ -244,7 +242,6 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
                     }
                 }
 
-                    // meshId = 95;
                 size_t trigCount = piano->meshesDataSize[meshId] / 3;
                 GLint index = piano->meshesDataStart[meshId] / 3;
                 mat4 mMat = {};
@@ -253,15 +250,12 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
                 glm_translate(mMat, cursor);
                 glm_scale(mMat, scaleVec);
                 // vec3 pos = {(offset + iM->xPosition) * 1.5, 50, 0};
-                vec3 pos = {(offset + iM->xPosition) * stretch, - iM->yPosition - staffOffset, 0};
+                vec3 pos = {(offset + iM->xPosition) * stretch, iM->yPosition - staffOffset, 0};
                 glm_translate(mMat, pos);
 
                 glUniformMatrix4fv(modelShaderMatUniform, 1, GL_FALSE, (float*)mMat);
 
-                if(item->typeSubGroup == ITEM_GROUP_TEXT){
-                    // printf("text %zu %zu %i\n", piano->meshesDataSize[meshId], index, meshId);
-                }
-                // printf("mesh id: %i %i %zu\n", meshId, index, trigCount);
+                // debugf("mesh id: %i %i %zu\n", meshId, index, trigCount);
                 glDrawArrays(GL_TRIANGLES, index, trigCount);
 
                 if(playedNote == true){
@@ -272,13 +266,16 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
 
             }
             else if(item->type == ITEM_STEAM){
+                useShader(interface->shader);
                 // staffOffset
                 struct ItemSteam *itemSteam = item->data;
                 // itemSteam->
                 float x = (itemSteam->xStart + offset) * stretch;
-                float y = itemSteam->yStart;
-                useShader(interface->shader);
-                drawLine(x, y, 0, x, y + itemSteam->length, 0);
+                
+                float y1 = itemSteam->y1 - staffOffset;
+                float y2 = itemSteam->y2 - staffOffset;
+
+                drawLine(x, y1, 0, x, y2, 0);
                 useShader(interface->modelShader);
             }
             else if(item->type == ITEM_BEAM){
@@ -291,13 +288,14 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
                 glUniformMatrix4fv(shaderMatUniform, 1, GL_FALSE, (float*)mMat);
 
                 struct ItemBeam *beam = item->data;
+                // float x1 = beam->xStart;
+                // float x2 = beam->xEnd;
                 float x1 = (beam->xStart + offset) * stretch;
-                float y1 = beam->yStart;
                 float x2 = (beam->xEnd   + offset) * stretch;
-                float y2 = beam->yEnd;
-                // printf("%f %f %f %f\n", x1, y1, x2, y2);
-                drawLine(x1, y1, 0, x2, y2, 0);
-                // drawLine(x1, 0, 0, 10, 10, 10);
+                float y = beam->yStart - staffOffset;
+
+                // debugf("%f %f %f %f\n", x1, y1, x2, y2);
+                drawLine(x1, y, 0, x2, y, 0);
 
                 useShader(interface->modelShader);
             }
@@ -335,7 +333,7 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
         }
     }
 
-    // printf("%zu\n", s);
+    // debugf("%zu\n", s);
 
     glfwSwapBuffers(interface->g->window);
     processPollEvents();
@@ -348,7 +346,7 @@ void pressNote(struct Note *note, struct PressedNotePVector *pressedNotes, Divis
     pressedNote->note = note;
     pressedNote->endDivision = note->duration + divisionCounter;
     PressedNotePVectorPush(pressedNotes, pressedNote);
-    printf("adding note %p at %zu\n", pressedNote, pressedNotes->size - 1);
+    // debugf("adding note %p at %zu\n", pressedNote, pressedNotes->size - 1);
 }
 
 void pianoPlaySong(struct Piano *piano, int midiDevice){
@@ -360,7 +358,7 @@ void pianoPlaySong(struct Piano *piano, int midiDevice){
     struct Measure **measures = piano->measures;
     size_t measureIndex = 0;
     Division currDivision = -1;
-    float currBmp = 175;
+    float currBmp = 120;
     float prevTime = 0;
     struct Attributes currAttributes = {};
     float divisionTimer = 0;
@@ -371,7 +369,6 @@ void pianoPlaySong(struct Piano *piano, int midiDevice){
     size_t divisionCounter = 0;
     while(!glfwWindowShouldClose(interface->g->window) && measureIndex < piano->measureSize){
         drawSheet(piano, pressedNotes);
-        glfwPollEvents();
 
         if(interface->paused){
             continue;
@@ -384,9 +381,9 @@ void pianoPlaySong(struct Piano *piano, int midiDevice){
 
         float beat = 60.0f / currBmp;
         float divisionDuration = (beat * 4.f) / (float)currMeasure->measureSize;
-        // printf("dur %f %f %f\n", measuresPerMin,  measureDuration, divisionDuration);
+        // debugf("dur %f %f %f\n", measuresPerMin,  measureDuration, divisionDuration);
 
-        // printf("time %f\n", time);
+        // debugf("time %f\n", time);
         divisionTimer += alpha;
         if(divisionTimer < divisionDuration){
             continue;
@@ -406,8 +403,8 @@ void pianoPlaySong(struct Piano *piano, int midiDevice){
             // exit(0);
         }
 
-        // printf("size: %zu\n", pressedNotes->size);
-        // printf("position: %zu %i %f\n", measureIndex, currDivision, divisionDuration);
+        // debugf("size: %zu\n", pressedNotes->size);
+        // debugf("position: %zu %i %f\n", measureIndex, currDivision, divisionDuration);
 
         // turn off any notes
         for(size_t i = 0; i < pressedNotes->size; ){
@@ -415,14 +412,14 @@ void pianoPlaySong(struct Piano *piano, int midiDevice){
             if(pressedNote->endDivision <= divisionCounter){
                 sendNoteEvent(midiDevice, NOTE_OFF, &pressedNote->note->pitch, 0);
 
-                // printf("removing %zu note %p\n", i, pressedNote);
+                // debugf("removing %zu note %p\n", i, pressedNote);
                 if(pressedNotes->size - 1 != i){
                     struct PressedNote *lastNote = pressedNotes->data[pressedNotes->size - 1], *temp = NULL;
-                    // printf("swap {%p} %p\n", pressedNote, lastNote);
+                    // debugf("swap {%p} %p\n", pressedNote, lastNote);
                     temp = pressedNote;
                     pressedNote = lastNote;
                     lastNote = temp;
-                    // printf("free %p\n", lastNote);
+                    // debugf("free %p\n", lastNote);
                     free(lastNote);
                     pressedNotes->data[i] = pressedNote;
                 }

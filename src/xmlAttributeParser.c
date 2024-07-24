@@ -35,7 +35,7 @@ void updateAttributes(struct Attributes *attributes, struct Attributes *currAttr
         // if curr attribute has
         StaffNumber size = MIN(currAttributes->stavesNumber, attributes->stavesNumber);
         currAttributes->stavesNumber = attributes->stavesNumber;
-        printf("staffNumbers copy %i\n", size);
+        debugf("staffNumbers copy %i\n", size);
         enum Clef *clefs = currAttributes->clefs;
         currAttributes->clefs = calloc(currAttributes->stavesNumber, sizeof(enum Clef));
         if(clefs){
@@ -50,7 +50,7 @@ void updateAttributes(struct Attributes *attributes, struct Attributes *currAttr
             if(attributes->clefs[s]){
                 currAttributes->clefs[s] = attributes->clefs[s];
             }
-            printf("clef %i = %i\n", s, attributes->clefs[s]);
+            debugf("clef %i = %i\n", s, attributes->clefs[s]);
         }
     }
 }
@@ -164,7 +164,7 @@ void parseClef(xmlNodePtr part, struct Attributes *a, struct Attributes *currAtr
     while(children){
         if(xmlStrcmp(children->name, XML_CHAR"sign") == 0){
             char *content = (char*)xmlNodeGetContent(children);
-            // printf("content >%s<\n", content);
+            // debugf("content >%s<\n", content);
             
             if(strcmp(content, "G") == 0){
                 clef = CLEF_G;

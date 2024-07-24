@@ -15,14 +15,14 @@ struct Text *textInit(struct Shader *shader, float *screenRatio){
 
     int8_t numberOfChar = 0;
     fread(&numberOfChar, sizeof(uint8_t), 1, file);
-    printf("number of characters %i\n", numberOfChar);
+    debugf("number of characters %i\n", numberOfChar);
     uint32_t bufferSize = 0;
     fread(&bufferSize, sizeof(uint32_t), 1, file);
 
     uint32_t bufferIndex = 0;
     float *buffer = malloc(sizeof(float) * bufferSize);
 
-    for(uint32_t i = 0; i < numberOfChar; i++){
+    for(int8_t i = 0; i < numberOfChar; i++){
         char c;
         fread(&c, sizeof(char), 1, file);
         uint32_t size;
@@ -65,13 +65,13 @@ struct Text *textInit(struct Shader *shader, float *screenRatio){
     //     0, 1, 0, 0, 0,
     // };
     // glBufferData(GL_ARRAY_BUFFER, sizeof(buffer2), buffer2, GL_STATIC_DRAW);
-    printf("%p\n", buffer);
+    debugf("%p\n", buffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * bufferSize, buffer, GL_STATIC_DRAW);
     
     // for(int i = 0; i < 20; i++){
-    //     printf("%f ", buffer[i]);
+    //     debugf("%f ", buffer[i]);
     //     if((i+1) % 5 == 0){
-    //         printf("\n");
+    //         debugf("\n");
     //     }
     // }
     
@@ -83,7 +83,7 @@ struct Text *textInit(struct Shader *shader, float *screenRatio){
 //     text->height = h;
 //     float s = h * 2.0f;
 //     text->scale = s;
-//     // printf("%i %f %f\n", height, h, s);
+//     // debugf("%i %f %f\n", height, h, s);
 //     return h * 2;
 // }
 

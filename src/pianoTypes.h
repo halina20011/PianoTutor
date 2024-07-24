@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 
+#include "helpers.h"
 #include "xmlTypes.h"
 #include "vector.h"
 
@@ -81,7 +82,7 @@ struct ItemTie{
 };
 
 struct ItemSteam{
-    float xStart, yStart, length;
+    float xStart, y1, y2;
 };
 
 struct ItemBeam{

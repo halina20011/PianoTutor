@@ -24,8 +24,9 @@ void GLAPIENTRY messageCallback(IGNORE GLenum source, IGNORE GLenum type, IGNORE
     fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n", messageString, type, severity, message );
 }
 
-float prevMeasureMovement = 0;
+double prevMeasureMovement = 0, prevPause = 0;
 void processPollEvents(){
+    double currTime = glfwGetTime();
     GLFWwindow *window = interface->g->window;
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS){
         glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -34,7 +35,7 @@ void processPollEvents(){
     bool left = glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS;
     bool right = glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
 
-    if(prevMeasureMovement + 0.2f < glfwGetTime()){
+    if(prevMeasureMovement + 0.2f < currTime){
         size_t currMeasure = interface->piano->currMeasure;
         if(left){
             if(currMeasure == 0){
@@ -62,24 +63,25 @@ void processPollEvents(){
     }
 
     bool spacePressed = (glfwGetKey(interface->g->window, GLFW_KEY_SPACE) == GLFW_PRESS);
-    if(spacePressed){
+    if(prevPause + 0.01f < currTime && spacePressed){
         interface->paused = !interface->paused;
     }
+    prevPause = currTime;
 }
 
-void keyCallback(GLFWwindow *w, int key, int scancode, int action, int mods){
+void keyCallback(IGNORE GLFWwindow *w, int key, IGNORE int scancode, int action, IGNORE int mods){\
     if(action != GLFW_PRESS){
         return;
     }
 
-    interface->key = key;
+    interface->key = (char)key;
 }
 
 double prevX = -1, prevY = -1;
-void cursorPosCallback(GLFWwindow *w, double x, double y){
-    float xScale = 1.f / interface->g->width;
-    float yScale = 1.f / interface->g->height;
-    printf("%f %f\n", xScale, yScale);
+void cursorPosCallback(IGNORE GLFWwindow *w, double x, double y){
+    float xScale = 1.f / (float)interface->g->width;
+    float yScale = 1.f / (float)interface->g->height;
+    // debugf("%f %f\n", xScale, yScale);
 
     // float sizeScale = interface->scale;
 
@@ -93,28 +95,27 @@ void cursorPosCallback(GLFWwindow *w, double x, double y){
         float alphaY = y - prevY;
         interface->xPos += alphaX * xScale;
         interface->yPos -= alphaY * yScale;
-        printf("pos %f %f\n", interface->xPos, interface->yPos);
     }
 
     prevX = x;
     prevY = y;
 }
 
-void mouseButtonCallback(GLFWwindow *w, int button, int action, int modes){
+void mouseButtonCallback(IGNORE GLFWwindow *w, int button, int action, IGNORE int modes){
     if(button == GLFW_MOUSE_BUTTON_LEFT){
         interface->drag = (action == GLFW_PRESS);
         prevX = -1;
     }
 }
 
-void scrollCallback(GLFWwindow *w, double x, double y){
-    // printf("%f\n", y);
+void scrollCallback(IGNORE GLFWwindow *w, IGNORE double x, double y){
+    // debugf("%f\n", y);
     if(y != 0){
-        interface->scale += y * 0.1;
+        interface->scale += (float)y * 0.1f;
     }
 }
 
-void framebufferSizeCallback(GLFWwindow *w, int width, int height){
+void framebufferSizeCallback(IGNORE GLFWwindow *w, int width, int height){
     interface->g->width = width;
     interface->g->height = height;
     interface->screenRatio = (float)width / (float)height;
@@ -135,7 +136,7 @@ void drawLineWeight(vec3 p1, vec3 p2, vec3 pos, float rotation, GLuint arrayBuff
     // |---+----|
     // |   |    |
     // D------- C
-    float s = 0.005;
+    float s = 0.005f;
     // float s = 0.05;
     float d = glm_vec3_distance(p1, p2);
     float points[] = {

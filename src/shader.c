@@ -1,7 +1,7 @@
 #include "./shader.h"
 
 GLint compileShader(const char *shaderSource, int type){
-    // printf("%s\n", shaderSource);
+    // debugf("%s\n", shaderSource);
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, (const char * const*)&shaderSource, NULL);
     glCompileShader(shader);
@@ -66,7 +66,7 @@ GLint getUniformLocation(struct Shader *shader, const GLchar *name){
 }
 
 void shaderPrint(struct Shader *s){
-    printf("%i %i %i\n", s->program, s->vao, s->vbo);
+    debugf("%i %i %i\n", s->program, s->vao, s->vbo);
 }
 
 void useShader(struct Shader *shader){

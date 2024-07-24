@@ -15,7 +15,7 @@ int midiDeviceInit(char *path){
 
         char *firstMatch = globResult.gl_pathv[0];
         if(firstMatch){
-            printf("matches %s\n", firstMatch);
+            debugf("matches %s\n", firstMatch);
             midiDevicePath = firstMatch;
         }
     }
@@ -59,27 +59,33 @@ uint8_t stepArray[] = {0, 2, 4, 5, 7, 9, 11};
 uint8_t toPitch(struct NotePitch *pitch){
     uint8_t step = stepArray[pitch->step];
     uint8_t r = (pitch->octave) * 12 + step + pitch->alter;
-    // printf("%i %i %i\n", step, pitch->stepChar, r);
+    // debugf("%i %i %i\n", step, pitch->stepChar, r);
     return r;
 }
 
 void sendNoteEvent(int midiDevice, uint8_t eventType, struct NotePitch *notePitch, uint8_t velocity){
+    if(midiDevice == -1){
+        return;
+    }
     uint8_t pitch = toPitch(notePitch);
-    printf("[%i:%i] => %i\n", notePitch->step, notePitch->octave, pitch);
-    // printf("MIDI message: %02X %02X %02X\n", eventType, pitch, velocity);
-    printf("MIDI message: %03i %03i %03i\n", eventType, pitch, velocity);
+    // debugf("[%i:%i] => %i\n", notePitch->step, notePitch->octave, pitch);
+    // debugf("MIDI message: %02X %02X %02X\n", eventType, pitch, velocity);
+    // debugf("MIDI message: %03i %03i %03i\n", eventType, pitch, velocity);
     uint8_t message[] = {eventType, pitch, velocity};
     write(midiDevice, message, sizeof(message));
 }
 
-void midiRead(int fd, uint8_t *noteBuffer){
+void midiRead(int midiDevice, uint8_t *noteBuffer){
+    if(midiDevice == -1){
+        return;
+    }
     uint8_t statusByte = 0;
     uint8_t dataBytes[2];
     uint8_t byte;
     int numDataBytes = 0;
 
     while(1){
-        ssize_t bytesRead = read(fd, &byte, sizeof(byte));
+        ssize_t bytesRead = read(midiDevice, &byte, sizeof(byte));
         if(bytesRead < 0){
             return;
         }
@@ -88,7 +94,7 @@ void midiRead(int fd, uint8_t *noteBuffer){
             statusByte = byte;
             numDataBytes = getNumDataBytes(statusByte);
             // if(numDataBytes == 0){
-            //     printf("Invalid status byte: 0x%02X\n", statusByte);
+            //     debugf("Invalid status byte: 0x%02X\n", statusByte);
             // }
         }
         else{
@@ -97,7 +103,7 @@ void midiRead(int fd, uint8_t *noteBuffer){
                 numDataBytes--;
 
                 if (numDataBytes == 0){
-                    printf("MIDI Event: Status=%i, Data1=%i, Data2=%i\n", statusByte, dataBytes[0], dataBytes[1]);
+                    debugf("MIDI Event: Status=%i, Data1=%i, Data2=%i\n", statusByte, dataBytes[0], dataBytes[1]);
                     uint8_t note = dataBytes[1];
                     if(statusByte == NOTE_ON){
                         noteBuffer[note] = 1;
@@ -109,7 +115,7 @@ void midiRead(int fd, uint8_t *noteBuffer){
                 }
             } 
             else{
-                printf("Invalid MIDI data byte: 0x%02X\n", byte);
+                debugf("Invalid MIDI data byte: 0x%02X\n", byte);
                 return;
             }
         }

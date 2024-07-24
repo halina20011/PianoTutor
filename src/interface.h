@@ -1,6 +1,8 @@
 #ifndef INTERFACE
 #define INTERFACE
 
+#include "helpers.h"
+
 #include "graphics.h"
 #include "text.h"
 

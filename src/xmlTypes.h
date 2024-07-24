@@ -18,15 +18,16 @@ typedef uint8_t StaffNumber;
 
 #define SET_BEAM(variable, beamNumber, value) (variable |= (value << (beamNumber * BEAM_BIT_SIZE)))
 
-#define GET_BEAM(variable, beamNumber) ((variable >> ((beamNumber) * BEAM_BIT_SIZE)) & (BEAM_BIT_SIZE + 1))
+#define GET_BEAM(variable, beamNumber) ((variable >> ((beamNumber) * BEAM_BIT_SIZE)) & BEAM_BIT_MASK)
 // https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/beam/
 /*
  * type of beam that note has
  *
- * beam is groupt by 3 bits
+ * beam is groupt by 4 bits
  * 1 - beam enabled | beam dissabled
- * 2 - hook enabled | beam does not have a beam
- * 3 - backward hook | forward hook
+ * 2 - beam ends here | beam start/continue
+ * 3 - hook enabled | beam does not have a beam
+ * 4 - backward hook | forward hook
  */
 
 typedef uint8_t Beam;
