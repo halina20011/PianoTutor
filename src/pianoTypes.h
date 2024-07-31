@@ -81,12 +81,16 @@ struct ItemTie{
     float xEnd, yEnd;
 };
 
-struct ItemSteam{
-    float xStart, y1, y2;
+struct ItemStem{
+    float xStart, noteOffset, y1, y2;
 };
 
 struct ItemBeam{
-    float xStart, yStart, xEnd, yEnd;
+    float xStart, yStart, w1, w2, xEnd, yEnd;
+};
+
+struct ItemLine{
+    float x, y, width;
 };
 
 struct ItemFlag{
@@ -97,10 +101,11 @@ struct ItemFlag{
 enum ItemType{
     ITEM_MESH,
     ITEM_TIE,
-    ITEM_STEAM,
+    ITEM_STEM,
     ITEM_BEAM,
     ITEM_FLAG,
     ITEM_BAR,
+    ITEM_LINE
 };
 
 enum ItemSubGroup{
@@ -148,7 +153,6 @@ NEW_VECTOR_TYPE(struct PressedNote*, PressedNotePVector);
 struct Sheet{
     struct ItemMeasure **measures;
     size_t measuresSize;
-    NotePitchExtreme *extremePitches;
     StaffNumber staffNumber;
     float *staffOffsets;
 };

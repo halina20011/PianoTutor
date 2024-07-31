@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
+#include <float.h>
 
 #include <libxml/parser.h>
 #include <libxml/tree.h>
@@ -94,6 +95,7 @@ struct Note{
     NoteDuration duration;
     Tuplet tuplet;
     struct Item *item;
+    float y;
 };
 
 NEW_VECTOR_TYPE(struct Measure*, MeasurePVector);
@@ -102,7 +104,8 @@ NEW_VECTOR_TYPE(struct NotePVector*, NoteVectorPVector);
 
 struct Notes{
     Beams beams;
-    struct Note *note;
+    float x, minY, maxY;
+    float width;
     struct Note **chord;
     ChordSize chordSize;
 };

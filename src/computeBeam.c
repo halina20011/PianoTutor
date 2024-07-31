@@ -1,5 +1,6 @@
 #include "compute.h"
 
+extern struct MeshBoundingBox *meshBoundingBoxes;
 
 void notesUpdateBeamDepth(struct Notes *notes, uint8_t *maxBeamDepth){
     uint8_t beam = *maxBeamDepth;
@@ -45,24 +46,6 @@ void findBeams(Staff staff, Division size, struct BeamPosition *beams, uint8_t b
     *rBeamsSize = beamsSize;
 }
 
-void beamXPosition(float *notesPositions, Division pos, float y, float *rPos){
-    float offset = 0;
-
-    // if the y is above the center then the note steam will start on the right side
-    if(0 < y){
-        offset += 1.0f;
-        // struct Note *note = (notes->chordSize) ? notes->chord[0] : notes->note;
-        // return MBB_MAX(note->item->meshId)[0];
-        // offset1 = noteWidth(staff[left]);
-        // offset2 = noteWidth(staff[end]);
-        // offset2 = MBB_MAX(QUATER_HEAD)[0];
-        // debugf("offset %f\n", offset);
-    }
-
-    *rPos = notesPositions[pos] + offset;
-}
-
-
 void steamPositions(float *rClosestBeamHeight, bool *rSide, float min, float max){
     // if the min and max are on the same side then use the unused side
     // else take the max value of them and use the smallest
@@ -87,50 +70,61 @@ void steamPositions(float *rClosestBeamHeight, bool *rSide, float min, float max
     *rSide = side;
 }
 
-void addBeamSteam(struct Notes *notes, enum Clef clef, StaffNumber staffIndex, struct ItemPVector *itemVector, float beamXPos, float beamYpos){
-    float min = FLT_MAX, max = FLT_MIN;
-    notesUpdateExtremes(notes, clef, &min, &max);
+void addBeamSteam(struct Notes *notes, StaffNumber staffIndex, struct ItemPVector *itemVector, float yBeamPos){
+    float minLenght = fabsf(yBeamPos - notes->minY);
+    float maxLenght = fabsf(yBeamPos - notes->maxY);
 
-    float minLenght = fabsf(beamYpos - min);
-    float maxLenght = fabsf(beamYpos - max);
-
-    float yNotePos = (minLenght < maxLenght) ? max : min;
+    float yNotePos = (minLenght < maxLenght) ? notes->maxY : notes->minY;
     
-    struct Item *item = itemStreamInit(staffIndex, beamXPos, yNotePos, beamYpos);
+    float noteWidthOffset = (0 < yBeamPos) ? notes->width : 0;
+
+    struct Item *item = itemStemInit(staffIndex, notes->x, noteWidthOffset, yNotePos, yBeamPos);
     ItemPVectorPush(itemVector, item);
 }
 
 // --------
 // ---- ---
 // - -  
-void addBeam(Staff staff, StaffNumber staffIndex, struct ItemPVector *itemVector, float *notesPositions, struct BeamPosition *bP, float y){
+void addBeam(Staff staff, StaffNumber staffIndex, struct ItemPVector *itemVector, struct BeamPosition *bP, float y){
     Division left = bP->left;
     Division right = bP->right;
 
-    float leftPos, rightPos;
-    beamXPosition(notesPositions, left, y, &leftPos);
-    
+    float leftPos, rightPos, leftNoteWidth, rightNoteWidth;
+    leftPos = staff[left]->x;
+    leftNoteWidth = staff[left]->width;
+
+    // if the beam is a hook then calculate the beam start/end
     if(GET_BIT(bP->firstBeam, BEAM_HOOK_ENABLED)){
-        int8_t offset = (GET_BIT(bP->firstBeam, BEAM_HOOK_BACKWARD)) ? -1 : 1;
+        // find the closest note
+        int offset = (GET_BIT(bP->firstBeam, BEAM_HOOK_BACKWARD)) ? -1 : 1;
         Division n = bP->left + offset;
         while(staff[n] == NULL){
             n += offset;
         }
-        
+
+        rightPos = staff[n]->x;
+        rightNoteWidth = staff[n]->width;
         // debugf("hook %i <%i> --> %i\n", bP->left, 
-        beamXPosition(notesPositions, n, y, &rightPos);
         float distance = rightPos - leftPos;
         rightPos = leftPos + distance / 2;
     }
     else{
-        beamXPosition(notesPositions, right, y, &rightPos);
+        rightPos = staff[right]->x;
+        rightNoteWidth = staff[right]->width;
     }
 
-    struct Item *itemSteam = itemBeamInit(staffIndex, leftPos, rightPos, y);
-    ItemPVectorPush(itemVector, itemSteam);
+
+    // if the beam is downwards reset the note widht offset
+    if(y < 0){
+        leftNoteWidth = 0;
+        rightNoteWidth = 0;
+    }
+
+    struct Item *itemBeam = itemBeamInit(staffIndex, leftPos, leftNoteWidth, rightPos, rightNoteWidth, y);
+    ItemPVectorPush(itemVector, itemBeam);
 }
 
-void computeBeams(struct Measure *measure, StaffNumber staffIndex, struct Attributes *currAttributes, struct ItemPVector *itemVector, float *notesPositions){
+void computeBeams(struct Measure *measure, StaffNumber staffIndex, struct ItemPVector *itemVector){
     Staff staff = measure->staffs[staffIndex];
     
     uint8_t maxBeamDepth = 0;
@@ -175,9 +169,9 @@ void computeBeams(struct Measure *measure, StaffNumber staffIndex, struct Attrib
         uint8_t localMaxBeamDepth = 0;
         for(Division n = left; n <= right; n++){
             struct Notes *notes = staff[n];
-            enum Clef clef = currAttributes->clefs[staffIndex];
             if(notes && notes->beams){
-                notesUpdateExtremes(notes, clef, &min, &max);
+                min = MIN(min, notes->minY);
+                max = MAX(max, notes->maxY);
                 notesUpdateBeamDepth(notes, &localMaxBeamDepth);
             }
         }
@@ -208,12 +202,8 @@ void computeBeams(struct Measure *measure, StaffNumber staffIndex, struct Attrib
             struct BeamInfo *bI = &beamsInfo[d];
             bI->yPos = beamYPosition;
             bI->offset = beamOffset;
-            // bI->firstBeam = firstBeam;
             
-            enum Clef clef = currAttributes->clefs[staffIndex];
-            float xBeamPosition = 0;
-            beamXPosition(notesPositions, d, beamYPosition, &xBeamPosition);
-            addBeamSteam(notes, clef, staffIndex, itemVector, xBeamPosition, beamYPosition);
+            addBeamSteam(notes, staffIndex, itemVector, beamYPosition);
         }
     }
     
@@ -234,7 +224,7 @@ void computeBeams(struct Measure *measure, StaffNumber staffIndex, struct Attrib
             struct BeamInfo *bI = &beamsInfo[left];
 
             debugf("adding beam on d %i y pos %f <%f>\n", left, bI->yPos, bI->offset * d);
-            addBeam(staff, staffIndex, itemVector, notesPositions, bP, bI->yPos + d * bI->offset);
+            addBeam(staff, staffIndex, itemVector, bP, bI->yPos + d * bI->offset);
         }
     }
 }

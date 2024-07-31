@@ -7,7 +7,6 @@
 #include "text.h"
 
 struct Interface{
-    float screenRatio;
     char key;
     bool paused;
 
@@ -18,6 +17,8 @@ struct Interface{
     struct Text *text;
     struct Shader *shader, *modelShader;
     struct Piano *piano;
+
+    bool showBoudningBox;
 };
 
 #endif

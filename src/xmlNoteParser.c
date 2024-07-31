@@ -71,7 +71,7 @@ void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size
         // then the buffer with this index will be set to NULL
         if(notesVectorMagazine->size <= i || notesVectorMagazine->data[i]->size == 0){
             staff[i] = NULL;
-            // fprintf(stderr, "%li 0\n", i);
+            fprintf(stderr, "%li 0\n", i);
         }
         else if(i < notesVectorMagazine->size && 0 < notesVectorMagazine->data[i]->size){
             // debugf("%i m p %p\n", i, notesVectorMagazine->data[i]);
@@ -96,19 +96,34 @@ void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size
             struct Notes *notes = calloc(1, sizeof(struct Notes));
 
             if(noteCounter == 0){
-                notes->note = lastRest;
+                struct Note **chord = malloc(sizeof(struct Note*));
+                chord[0] = lastRest;
+                notes->chord = chord;
+
+                // printf("last rest %p\n", lastRest);
+                // notes->chord = &lastRest;
+                notes->chordSize = 1;
             }
             else if(noteCounter == 1){
-                notes->note = lastNote;
+                struct Note **chord = malloc(sizeof(struct Note*));
+                chord[0] = lastNote;
+                notes->chord = chord;
+                printf("last note %p %p\n", lastNote, notes->chord);
+                notes->chordSize = 1;
                 notes->beams = lastNote->beams;
             }
             else{
                 struct Note **chord = malloc(sizeof(struct Note*) * noteCounter);
+                printf("new chord %p\n", chord);
 
                 for(size_t j = 0; j < notesVector->size; j++){
                     struct Note *note = notesVector->data[j];
                     if(GET_BIT(note->flags, NOTE_FLAG_REST) == 0){
                         chord[j] = note;
+                    }
+                    else{
+                        fprintf(stderr, "is rest dlkfjsad;lfkja;sldfjas");
+                        exit(1);
                     }
                 }
 
@@ -117,6 +132,7 @@ void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size
                 notes->beams = chord[0]->beams;
             }
 
+            printf("chord p: %p\n", notes->chord);
             staff[i] = notes;
 
             // debugf("flushed note's beams %i\n", notes->beams);

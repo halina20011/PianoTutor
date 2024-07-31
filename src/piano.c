@@ -4,6 +4,8 @@
 #include <string.h>
 extern struct Interface *interface;
 
+extern GLuint elementArrayBuffer;
+
 extern GLint shaderGlobalMatUniform;
 extern GLint modelShaderGlobalMatUniform;
 
@@ -80,7 +82,7 @@ uint8_t assignMeshId(char *name){
     exit(1);
 }
 
-void meshBoundingBox(struct MeshBoundingBox *bb, float *data, size_t size){
+void meshBoundingBox(struct MeshBoundingBox *bb, float *data, uint32_t size){
     bb->min[0] = FLT_MAX;
     bb->min[1] = FLT_MAX;
     bb->min[2] = FLT_MAX;
@@ -89,7 +91,7 @@ void meshBoundingBox(struct MeshBoundingBox *bb, float *data, size_t size){
     bb->max[1] = FLT_MIN;
     bb->max[2] = FLT_MIN;
 
-    for(size_t i = 0; i < size; i += 3){
+    for(uint32_t i = 0; i < size; i += 3){
         bb->min[0] = MIN(data[i + 0], bb->min[0]);
         bb->min[1] = MIN(data[i + 1], bb->min[1]);
         bb->min[2] = MIN(data[i + 2], bb->min[2]);
@@ -98,6 +100,30 @@ void meshBoundingBox(struct MeshBoundingBox *bb, float *data, size_t size){
         bb->max[1] = MAX(data[i + 1], bb->max[1]);
         bb->max[2] = MAX(data[i + 2], bb->max[2]);
     }
+}
+
+void meshBoundingBoxPrint(enum Meshes id){
+    struct MeshBoundingBox *bb = &meshBoundingBoxes[id];
+
+    SET_COLOR(modelShaderColorUniform, GREEN);
+    // A ---- B
+    // |      |
+    // |      |
+    // D ---- C
+    vec3 a = {bb->min[0], bb->max[1], 0};
+    vec3 b = {bb->max[0], bb->max[1], 0};
+    vec3 c = {bb->max[0], bb->min[1], 0};
+    vec3 d = {bb->min[0], bb->min[1], 0};
+
+    drawLineVec(a, b);
+    drawLineVec(b, c);
+    drawLineVec(c, d);
+    drawLineVec(d, a);
+
+    drawLineVec(a, c);
+    drawLineVec(b, d);
+
+    SET_COLOR(modelShaderColorUniform, WHITE);
 }
 
 void loadPianoMeshs(struct Piano *piano){
@@ -190,7 +216,7 @@ struct Piano *pianoInit(struct Measure **measures, size_t measureSize){
 void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
     glClear(GL_COLOR_BUFFER_BIT);
 
-    float stretch = 2.0f;
+    float stretch = 1.1f;
     float clearance = 0.7f;
 
     float offset = 0 + clearance;
@@ -200,8 +226,9 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
     vec3 globScale = {interface->scale, interface->scale, interface->scale};
     vec3 globPos = {interface->xPos, interface->yPos, 0};
     glm_mat4_identity(globMatrix);
-    glm_translate(globMatrix, globPos);
+    // glm_translate(globMatrix, globPos);
     glm_scale(globMatrix, globScale);
+    glm_translate(globMatrix, globPos);
     useShader(interface->modelShader);
     glUniformMatrix4fv(modelShaderGlobalMatUniform, 1, GL_FALSE, (float*)globMatrix);
 
@@ -209,11 +236,18 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
     glUniformMatrix4fv(shaderGlobalMatUniform, 1, GL_FALSE, (float*)globMatrix);
 
     // size_t s = 0;
-    float scale = 0.008;
+    float scale = 0.008f;
     vec3 scaleVec = {scale, scale * interface->g->screenRatio, scale};
-    vec3 cursor = {-0.8, 0.8, 0};
+    vec3 cursor = {-0.8f, 0.8f, 0};
     float lastStaffOffset = piano->sheet->staffOffsets[piano->sheet->staffNumber - 1];
     float barHeight = lastStaffOffset + (piano->sheet->staffNumber - 1) * 4.f;
+
+    mat4 cleanMat = {};
+    glm_mat4_identity(cleanMat);
+    glm_translate(cleanMat, cursor);
+    glm_scale(cleanMat, scaleVec);
+    glUniformMatrix4fv(shaderMatUniform, 1, GL_FALSE, (float*)cleanMat);
+    
     // for(size_t m = 0; m < 1; m++){
     for(size_t m = piano->currMeasure; m < sheet->measuresSize; m++){
         struct ItemMeasure *measure = sheet->measures[m];
@@ -261,24 +295,46 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
                 if(playedNote == true){
                     SET_COLOR(modelShaderColorUniform, WHITE);
                 }
+
+                if(interface->showBoudningBox){
+                    useShader(interface->shader);
+                    glUniformMatrix4fv(shaderMatUniform, 1, GL_FALSE, (float*)mMat);
+                    meshBoundingBoxPrint(item->meshId);
+                    glUniformMatrix4fv(shaderMatUniform, 1, GL_FALSE, (float*)cleanMat);
+                }
             }
             else if(item->type == ITEM_BAR){
 
             }
-            else if(item->type == ITEM_STEAM){
+            else if(item->type == ITEM_STEM){
                 useShader(interface->shader);
                 // staffOffset
-                struct ItemSteam *itemSteam = item->data;
-                // itemSteam->
-                float x = (itemSteam->xStart + offset) * stretch;
-                
-                float y1 = itemSteam->y1 - staffOffset;
-                float y2 = itemSteam->y2 - staffOffset;
+                struct ItemStem *itemStem = item->data;
+                // itemStem->
+                float x = (itemStem->xStart + offset) * stretch + itemStem->noteOffset;
+
+                float y1 = itemStem->y1 - staffOffset;
+                float y2 = itemStem->y2 - staffOffset;
 
                 drawLine(x, y1, 0, x, y2, 0);
-                useShader(interface->modelShader);
             }
             else if(item->type == ITEM_BEAM){
+                useShader(interface->shader);
+
+                struct ItemBeam *beam = item->data;
+                float x1 = (beam->xStart + offset) * stretch;
+                float x2 = (beam->xEnd   + offset) * stretch;
+                float w1 = beam->w1;
+                float w2 = beam->w2;
+                float y = beam->yStart - staffOffset;
+
+                // debugf("%f %f %f\n", x1, x2, y);
+                // drawLine(x1, y, 0, x2, y, 0);
+                vec3 p1 = {x1 + w1, y, 0};
+                vec3 p2 = {x2 + w2, y, 0};
+                drawLineWeight(p1, p2, cursor, scaleVec, BEAM_HEIGHT, shaderMatUniform);
+            }
+            else if(item->type == ITEM_LINE){
                 useShader(interface->shader);
 
                 mat4 mMat = {};
@@ -287,17 +343,13 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
                 glm_scale(mMat, scaleVec);
                 glUniformMatrix4fv(shaderMatUniform, 1, GL_FALSE, (float*)mMat);
 
-                struct ItemBeam *beam = item->data;
-                // float x1 = beam->xStart;
-                // float x2 = beam->xEnd;
-                float x1 = (beam->xStart + offset) * stretch;
-                float x2 = (beam->xEnd   + offset) * stretch;
-                float y = beam->yStart - staffOffset;
+                struct ItemLine *line = item->data;
+                float x1 = (line->x + offset) * stretch;
+                float x2 = ((line->x + line->width) + offset) * stretch;
+                float y = line->y - staffOffset;
 
-                // debugf("%f %f %f %f\n", x1, y1, x2, y2);
                 drawLine(x1, y, 0, x2, y, 0);
-
-                useShader(interface->modelShader);
+                // drawLine(x1, y, 0, x1, y + 1, 0);
             }
             else{
                 fprintf(stderr, "item type '%i' not implemented\n", item->type);
@@ -307,28 +359,30 @@ void drawSheet(struct Piano *piano, struct PressedNotePVector *pressedNotes){
 
         offset += measure->width;
         useShader(interface->shader);
-        mat4 mMat = {};
-        glm_mat4_identity(mMat);
-        glm_translate(mMat, cursor);
-        glm_scale(mMat, scaleVec);
-        glUniformMatrix4fv(shaderMatUniform, 1, GL_FALSE, (float*)mMat);
+        // mat4 mMat = {};
+        // glm_mat4_identity(mMat);
+        // glm_translate(mMat, cursor);
+        // glm_scale(mMat, scaleVec);
+        // glUniformMatrix4fv(shaderMatUniform, 1, GL_FALSE, (float*)mMat);
         // float x = (float)(offset + m) * stretch;
         float x = offset * stretch;
         drawLine(x, 4.f, 0, x, - barHeight, 1);
         offset += clearance;
+
+        SET_COLOR(shaderColorUniform, WHITE);
     }
 
     // draw staffs
     useShader(interface->shader);
+    // mat4 mMat = {};
+    // glm_mat4_identity(mMat);
+    // glm_translate(mMat, cursor);
+    // glm_scale(mMat, scaleVec);
+    // glUniformMatrix4fv(shaderMatUniform, 1, GL_FALSE, (float*)mMat);
     for(StaffNumber s = 0; s < sheet->staffNumber; s++){
         float staffOffset = sheet->staffOffsets[s];
         for(int8_t yOffset = -2; yOffset <= 2; yOffset++){
             float y = yOffset * 2.0f + staffOffset;
-            mat4 mMat = {};
-            glm_mat4_identity(mMat);
-            glm_translate(mMat, cursor);
-            glm_scale(mMat, scaleVec);
-            glUniformMatrix4fv(shaderMatUniform, 1, GL_FALSE, (float*)mMat);
             drawLine(0, -y, 0, offset * stretch, -y, 0);
         }
     }
@@ -437,15 +491,11 @@ void pianoPlaySong(struct Piano *piano, int midiDevice){
                 continue;
             }
 
-            if(notes->chordSize){
-                for(ChordSize c = 0; c < notes->chordSize; c++){
-                    struct Note *note = notes->chord[c];
+            for(ChordSize c = 0; c < notes->chordSize; c++){
+                struct Note *note = notes->chord[c];
+                
+                if(!GET_BIT(note->flags, NOTE_FLAG_REST)){
                     pressNote(note, pressedNotes, divisionCounter, midiDevice);
-                }
-            }
-            else{
-                if(!GET_BIT(notes->note->flags, NOTE_FLAG_REST)){
-                    pressNote(notes->note, pressedNotes, divisionCounter, midiDevice);
                 }
             }
         }

@@ -19,13 +19,12 @@
 // TODO: use correct tempto from Song struct
 // TODO: create note sheet window
 
-// TODO: add lines under staff
+// TODO: add note flags
+// TODO: repeats
 // TODO: correct division
 // TODO: learnSong
 // TODO: keyboard
 // TODO: pickup measure => strip start and end
-// TODO: repeats
-// TODO: measure number
 // TODO: correct bpm
 // TODO: tuplets
 // TODO: bars
@@ -73,6 +72,8 @@ struct InputParser inputParser = {
 };
 
 struct Interface *interface = NULL;
+GLuint elementArrayBuffer = 0;
+
 GLint shaderGlobalMatUniform = 0;
 GLint modelShaderGlobalMatUniform = 0;
 
@@ -93,6 +94,7 @@ int main(int argc, char **argv){
     interface = calloc(1, sizeof(struct Interface));
     interface->scale = 1;
     interface->paused = true;
+    interface->showBoudningBox = 0;
     
     // TODO: max percisionLevel is 10 ^ 9 so it would fit in uint32_t and float has limited number of fraction
     // uint32_t percision = pow(10, percisionLevel);
@@ -115,11 +117,11 @@ int main(int argc, char **argv){
 
     struct Piano *piano = pianoInit(measures, measuresSize);
 
-    // piano->measureSize = 3;
+    // piano->measureSize = 12;
     computeMeasures(piano);
 
-    int midiDevice = midiDeviceInit("auto");
-    // int midiDevice = -1;
+    // int midiDevice = midiDeviceInit("auto");
+    int midiDevice = -1;
     // while(!glfwWindowShouldClose(interface->g->window)){
     //     drawSheet(piano);
     //     // exit(1);

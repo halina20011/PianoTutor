@@ -4,6 +4,8 @@
 
 extern struct Interface *interface;
 
+extern GLuint elementArrayBuffer;
+
 extern GLint shaderGlobalMatUniform;
 extern GLint modelShaderGlobalMatUniform;
 
@@ -24,7 +26,7 @@ void GLAPIENTRY messageCallback(IGNORE GLenum source, IGNORE GLenum type, IGNORE
     fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n", messageString, type, severity, message );
 }
 
-double prevMeasureMovement = 0, prevPause = 0;
+double prevMeasureMovement = 0, prevHome = 0;
 void processPollEvents(){
     double currTime = glfwGetTime();
     GLFWwindow *window = interface->g->window;
@@ -61,15 +63,25 @@ void processPollEvents(){
     if(!left && !right){
         prevMeasureMovement = 0;   
     }
-
-    bool spacePressed = (glfwGetKey(interface->g->window, GLFW_KEY_SPACE) == GLFW_PRESS);
-    if(prevPause + 0.01f < currTime && spacePressed){
-        interface->paused = !interface->paused;
+    
+    bool homePressed = (glfwGetKey(interface->g->window, GLFW_KEY_HOME) == GLFW_PRESS);
+    if(homePressed && prevHome + 0.01f < currTime){
+        interface->xPos = 0;
+        interface->yPos = 0;
+        interface->scale = 1.0f;
+        prevHome = currTime;
     }
-    prevPause = currTime;
 }
 
 void keyCallback(IGNORE GLFWwindow *w, int key, IGNORE int scancode, int action, IGNORE int mods){\
+    if(key == 'B' && action == GLFW_RELEASE){
+        interface->showBoudningBox = !interface->showBoudningBox;
+    }
+    
+    if(key == ' ' && action == GLFW_RELEASE){
+        interface->paused = !interface->paused;
+    }
+
     if(action != GLFW_PRESS){
         return;
     }
@@ -79,11 +91,10 @@ void keyCallback(IGNORE GLFWwindow *w, int key, IGNORE int scancode, int action,
 
 double prevX = -1, prevY = -1;
 void cursorPosCallback(IGNORE GLFWwindow *w, double x, double y){
-    float xScale = 1.f / (float)interface->g->width;
-    float yScale = 1.f / (float)interface->g->height;
+    float xScale = (1.f / ((float)interface->g->width * interface->scale)) * interface->g->screenRatio;
+    float s = (float)interface->g->width / (float)interface->g->height;
+    float yScale = (1.f / ((float)interface->g->height) * (1.0f/interface->scale)) * s;
     // debugf("%f %f\n", xScale, yScale);
-
-    // float sizeScale = interface->scale;
 
     if(prevX == -1){
         prevX = x;
@@ -118,7 +129,8 @@ void scrollCallback(IGNORE GLFWwindow *w, IGNORE double x, double y){
 void framebufferSizeCallback(IGNORE GLFWwindow *w, int width, int height){
     interface->g->width = width;
     interface->g->height = height;
-    interface->screenRatio = (float)width / (float)height;
+    interface->g->screenRatio = (float)width / (float)height;
+    glViewport(0, 0, width, height);
 }
 
 void drawLine(float x1, float y1, float z1, float x2, float y2, float z2){
@@ -130,77 +142,46 @@ void drawLine(float x1, float y1, float z1, float x2, float y2, float z2){
     glDrawArrays(GL_LINES, 0, 2);
 }
 
-void drawLineWeight(vec3 p1, vec3 p2, vec3 pos, float rotation, GLuint arrayBuffer, GLuint elementArrayBuffer, GLuint modelUniformLocation){
-    // A ------ B
-    // |   |    |
-    // |---+----|
-    // |   |    |
-    // D------- C
-    float s = 0.005f;
-    // float s = 0.05;
+void drawLineVec(vec3 p1, vec3 p2){
+    float line[] = {
+        p1[0], p1[1], p1[2],
+        p2[0], p2[1], p2[2],
+    };
+    glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
+    glDrawArrays(GL_LINES, 0, 2);
+}
+
+void drawLineWeight(vec3 p1, vec3 p2, vec3 pos, vec3 scale, float thicnkess, GLint modelUniformLocation){
+    // A ----------------------- B
+    // |                         | 
+    // +p1---------------------p2+ width
+    // |                         |
+    // D ----------------------- C
+    
     float d = glm_vec3_distance(p1, p2);
     float points[] = {
-        - s, + s, 0, 0, 0, // A
-        + s, + s, 0, 0, 0, // B
-        + s, - s, 0, 0, 0, // C
-        - s, - s, 0, 0, 0, // D
-        - s, + s, 0 - d, 0, 0, // A2
-        + s, + s, 0 - d, 0, 0, // B2
-        + s, - s, 0 - d, 0, 0, // C2
-        - s, - s, 0 - d, 0, 0, // D2
+        p1[0]    , p1[1] + thicnkess / 2.0f, 0, // A
+        p1[0] + d, p1[1] + thicnkess / 2.0f, 0, // B
+        p1[0]    , p1[1] - thicnkess / 2.0f, 0, // D
+        p1[0] + d, p1[1] - thicnkess / 2.0f, 0, // C
     };
 
-    vec3 dir = {};
-    glm_vec3_sub(p2, p1, dir);
-    glm_vec3_normalize(dir);
+    float x = p2[0] - p1[0];
+    float y = p2[1] - p1[1];
+    float rot = atan2f(y, x);
 
     mat4 mat;
     glm_mat4_identity(mat);
 
-    // glm_translate(mat, p1);
-    if(dir[0] == 0 && dir[2] == 0){
-        glm_look(p1, dir, (vec3){1, 0, 0}, mat);
-        // glm_look((vec3){0, 0, 0}, dir, (vec3){1, 0, 0}, mat);
-    }
-    else{
-        // glm_look((vec3){0, 0, 0}, dir, (vec3){0, 1, 0}, mat);
-        glm_look(p1, dir, (vec3){0, 1, 0}, mat);
-    }
-    
-    glm_rotate_at(mat, pos, rotation, (vec3){0, 1, 0});
-    glm_mat4_inv(mat, mat);
-    // glm_translate(mat, pos);
-    // glm_rotate_at(mat, (vec3){0, 0, 0}, rotation, (vec3){0, 1, 0});
+    // glm_rotate_at(mat, pos, rot, (vec3){0, 0, 1});
 
-    // glm_look(p1, dir, (vec3){0, 1, 0}, mat);
-    // glm_scale(mat, (vec3){d, d, d});
-    // glm_translate(mat, p1);
+    glm_translate(mat, pos);
+    glm_scale(mat, scale);
 
     glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)mat);
 
-    glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_DYNAMIC_DRAW);
-
-    GLubyte indices[] = {
-        0, 1, 2, // start 
-        0, 2, 3, // 
-        4, 5, 6, // end
-        4, 6, 7,
-        // ------
-        0, 4, 
-        1, 5, 
-        2, 6, 
-        3, 7, 
-        0, 4
-    };
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementArrayBuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
-
-    // glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_BYTE, NULL);
-    // glDrawElements(GL_TRIANGLE_STRIP, 10, GL_UNSIGNED_BYTE, NULL);
-    glDrawRangeElements(GL_TRIANGLES, 0, 12, 12, GL_UNSIGNED_BYTE, (void*)0);
-    glDrawRangeElements(GL_TRIANGLE_STRIP, 12, 22, 10, GL_UNSIGNED_BYTE, (void*)(12 * sizeof(GLbyte)));
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
 struct Graphics *graphicsInit(){
@@ -270,6 +251,9 @@ struct Graphics *graphicsInit(){
     modelShaderMatUniform = getUniformLocation(interface->modelShader, "modelMatrix");
     modelShaderColorUniform = getUniformLocation(interface->shader, "color");
     SET_COLOR(modelShaderColorUniform, WHITE);
+
+    glGenBuffers(1, &elementArrayBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, elementArrayBuffer);
 
     g->window = window;
     interface->g = g;

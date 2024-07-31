@@ -4,13 +4,17 @@ This is also meant to be FOSS tool/app as a replacement to a lot of paied option
 
 ## Images
 <img src="Images/preview1.png" alt="preview1" width="100%">
+<img src="Images/preview2.png" alt="preview2" width="100%">
+
+#### Old Images
+<img src="Images/previewOld1.png" alt="preview1" width="100%">
 
 ## Dependencies
 - glew (opengl)
-- glfw
-- libxml2
+- glfw3
 - cglm
-- freetype2 (only for development)
+- libxml2
+- libzip
 
 ## Software
 - Blender

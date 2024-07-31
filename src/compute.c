@@ -11,25 +11,25 @@ struct NotePitch sharp[7] = {P(3, 5), P(0, 5), P(4, 5), P(1, 5), P(5, 3), P(2, 5
 struct NotePitch flats[7] = {P(6, 4), P(2, 5), P(5, 4), P(1, 5), P(4, 4), P(0, 5), P(3, 4)};
 
 float positionFromCenter(enum Clef clef, struct NotePitch *notePitch){
-    Pitch pitch = TO_PITCH_P(notePitch);
-    Pitch center = 0;
+    float pitch = TO_PITCH_P(notePitch);
+    float center = 0;
     if(CLEF_G_15_UP <= clef && clef <= CLEF_G_15_DOWN){
         // center h, 4 => 6, 4
         struct NotePitch centerPitch = {6, 4, 0, 0};
-        center = TO_PITCH(centerPitch) + (uint8_t)(G_CLEF - clef) * 8;
+        center = TO_PITCH(centerPitch) + (int8_t)(G_CLEF - clef) * 7;
     }
     else if(CLEF_F_15_UP <= clef && clef <= CLEF_F_15_DOWN){
-        // center d, 3 => 2, 3
-        struct NotePitch centerPitch = {2, 3, 0, 0};
-        center = TO_PITCH(centerPitch) + (uint8_t)(F_CLEF - clef) * 8;
+        // center d, 3 => 1, 3
+        struct NotePitch centerPitch = {1, 3, 0, 0};
+        center = TO_PITCH(centerPitch) + (int8_t)(F_CLEF - clef) * 7;
     }
     else{
         fprintf(stderr, "clef %i not implemented\n", clef);
         exit(1);
     }
 
-    int8_t p = (int8_t)(pitch - center);
-    // debugf("center %i[%i] - %i => %i\n", pitch, clef, center, p);
+    float p = pitch - center;
+    debugf("center %i[%i] - %f => %f\n", pitch, clef, center, p);
 
     return p;
 }
@@ -56,79 +56,57 @@ enum Meshes getAccidental(struct Note *note){
     exit(1);
 }
 
-void calculateAccidentalOffset(Staff *staffs, StaffNumber staffSize, Division d, float *accidentalOffset){
-    float maxOffset = 0;
+void calculateNotesSizes(Staff *staffs, StaffNumber staffSize, Division d, struct Attributes *currAttributes, float *rAccidentalMaxWidth, float *rNoteMaxWidht, float *rFlagMaxWidth){
+    float accidentalMaxWidth = 0;
+    float noteMaxWidht = 0;
+    float flagMaxWidth = 0;
 
     for(StaffNumber s = 0; s < staffSize; s++){
         Staff staff = staffs[s];
         struct Notes *notes = staff[d];
-        if(notes){
-            if(notes->chordSize){
-                for(ChordSize n = 0; n < notes->chordSize; n++){
-                    struct Note *note = notes->chord[n];
-                    enum Meshes meshId = getAccidental(note);
-                    if(meshId != MESH_NULL){
-                        maxOffset = MAX(maxOffset, MBB_MAX(meshId)[0]);
-                    }
-                }
+        if(!notes){
+            continue;
+        }
+
+        float min = FLT_MAX, max = FLT_MIN;
+        struct Note **chord = notes->chord;
+        for(ChordSize n = 0; n < notes->chordSize; n++){
+            struct Note *note = chord[n];
+
+            // get y note pos
+            float y = (GET_BIT(note->flags, NOTE_FLAG_REST)) ? 0 : positionFromCenter(currAttributes->clefs[s], &note->pitch);
+            note->y = y;
+
+            // update note extreme
+            min = MIN(min, y);
+            max = MAX(max, y);
+
+            if(note->noteType == NOTE_TYPE_NULL){
+                note->noteType = noteDurationToType(note, currAttributes);
+                debugf("calculated note type: %i\n", note->noteType);
             }
-            else{
-                struct Note *note = notes->note;
-                enum Meshes meshId = getAccidental(note);
-                if(meshId != MESH_NULL){
-                    maxOffset = MAX(maxOffset, MBB_MAX(meshId)[0]);
-                }
+
+            enum Meshes accidentalMeshId = getAccidental(note);
+            if(accidentalMeshId != MESH_NULL){
+                accidentalMaxWidth = MAX(accidentalMaxWidth, MBB_MAX(accidentalMeshId)[0]);
+            }
+
+            enum Meshes noteMeshId = (GET_BIT(note->flags, NOTE_FLAG_REST)) ? noteRest(note) : noteHead(note);
+            noteMaxWidht = MAX(noteMaxWidht, MBB_MAX(noteMeshId)[0]);
+
+            enum Meshes noteFlagMeshId = getAccidental(note);
+            if(noteFlagMeshId != MESH_NULL){
+                flagMaxWidth = MAX(flagMaxWidth, MBB_MAX(noteFlagMeshId)[0]);
             }
         }
+
+        notes->minY = min;
+        notes->maxY = max;
     }
 
-    *accidentalOffset = maxOffset;
-}
-
-struct Item *itemInit(enum ItemType type, enum Meshes meshId, StaffNumber staffIndex, void *data){
-    struct Item *item = malloc(sizeof(struct Item));
-    
-    item->type = type;
-    item->meshId = meshId;
-    item->staffIndex = staffIndex;
-    item->data = data;
-
-    return item;
-}
-
-struct Item *itemMeshInit(enum Meshes meshId, StaffNumber staffIndex, float xPosition, float yPosition){
-    struct Item *item = malloc(sizeof(struct Item));
-    struct ItemMesh *itemMesh = malloc(sizeof(struct ItemMesh));
-    itemMesh->xPosition = xPosition;
-    itemMesh->yPosition = yPosition;
-
-    item->data = itemMesh;
-    item->meshId = meshId;
-    item->type = ITEM_MESH;
-    item->typeSubGroup = ITEM_GROUP_NULL;
-    item->staffIndex = staffIndex;
-
-    return item;
-}
-
-struct Item *itemStreamInit(StaffNumber staffIndex, float xPosition, float y1, float y2){
-    struct ItemSteam *itemSteam = malloc(sizeof(struct ItemSteam));
-    itemSteam->xStart = xPosition;
-    itemSteam->y1 = y1;
-    itemSteam->y2 = y2;
-    return itemInit(ITEM_STEAM, MESH_NULL, staffIndex, itemSteam);
-}
-
-struct Item *itemBeamInit(StaffNumber staffIndex, float x1, float x2, float yPosition){
-    struct ItemBeam *itemBeam = malloc(sizeof(struct ItemBeam));
-    
-    itemBeam->xStart = x1;
-    itemBeam->yStart = yPosition;
-
-    itemBeam->xEnd = x2;
-    itemBeam->yEnd = yPosition;
-    
-    return itemInit(ITEM_BEAM, MESH_NULL, staffIndex, itemBeam);
+    *rAccidentalMaxWidth = accidentalMaxWidth;
+    *rNoteMaxWidht = noteMaxWidht;
+    *rFlagMaxWidth = flagMaxWidth;
 }
 
 void computeNumber(struct ItemPVector *itemVector, uint8_t n, float x, float y, float scale){
@@ -171,17 +149,10 @@ void computeKeySignature(KeySignature keySignature, struct ItemPVector *itemsVec
 
     for(KeySignature i = 0; i < keySignature; i++){
         for(StaffNumber s = 0; s < staffNumber; s++){
-            struct Item *item = malloc(sizeof(struct Item));
-            item->meshId = meshId;
-            item->type = ITEM_MESH;
-            item->staffIndex = s;
-            struct ItemMesh *iM = malloc(sizeof(struct ItemMesh));
-            iM->xPosition = *offset + max * i;
-            item->data = iM;
-            // iM->yPosition = 0;
-            iM->yPosition = positionFromCenter(CLEF_G, &keySignatureArray[i]);
+            float x = *offset + max * i;
+            float y = positionFromCenter(CLEF_G, &keySignatureArray[i]);
+            struct Item *item = itemMeshInit(meshId, s, x, y); 
             ItemPVectorPush(itemsVector, item);
-            // debugf("added %zu\n", itemsVector->size);
         }
     }
 
@@ -240,115 +211,78 @@ enum NoteType noteDurationToType(struct Note *note, struct Attributes *currAttri
     return NOTE_TYPE_QUARTER - powIndex;
 }
 
-enum Meshes noteHead(struct Note *note){
-    switch(note->noteType){
-        case NOTE_TYPE_NULL:
-            fprintf(stderr, "note does not have type\n");
-            exit(1);
-        // TODO: add all note meshes
-        // case NOTE_TYPE_MAXIMA:
-        // case NOTE_TYPE_LONG:
-            // return DOUBLE_WHOLE_HEAD;
-        case NOTE_TYPE_BREVE:
-            return DOUBLE_WHOLE_HEAD;
-        case NOTE_TYPE_WHOLE:
-            return WHOLE_HEAD;
-        case NOTE_TYPE_HALF:
-            return HALF_HEAD;
-        default:
-            return QUATER_HEAD;
-    }
-}
-
-enum Meshes noteRest(struct Note *note){
-    switch(note->noteType){
-        case NOTE_TYPE_NULL:
-            fprintf(stderr, "note does not have type\n");
-            exit(1);
-        case NOTE_TYPE_WHOLE:
-            return WHOLE_REST;
-        case NOTE_TYPE_HALF:
-            return HALF_REST;
-
-        case NOTE_TYPE_EIGHTH:
-            return EIGHT_REST;
-        case NOTE_TYPE_16TH:
-            return SIXTEENTH_REST;
-        case NOTE_TYPE_32ND:
-            return THIRTY_SECOND_REST;
-        case NOTE_TYPE_64TH:
-            return SIXTY_FOURTH_REST;
-        case NOTE_TYPE_128TH:
-            return HUNDERT_TWENTY_EIGHT_REST;
-
-        // TODO: add all note rests
-        // case NOTE_TYPE_MAXIMA:
-        // case NOTE_TYPE_LONG:
-        // case NOTE_TYPE_256TH:
-        // case NOTE_TYPE_512TH:
-        // case NOTE_TYPE_1024TH:
-        default:
-            return HUNDERT_TWENTY_EIGHT_REST;
-    }
-}
-
-enum Meshes noteFlag(struct Note *note){
-    if(NOTE_TYPE_EIGHTH <= note->noteType){
-        return NOTE_TYPE_EIGHTH + FLAG1;
-    }
-
-    return MESH_NULL;
-}
-
-// enum Meshes accidental(struct Attributes *currAttributes, struct Note *note){
-//     
-// }
-
-
-// void computeNote(struct Note *note, enum Clef clef, struct ItemPVector *itemVector, float offset, struct Attributes *currAttributes, NotePitchExtreme *notePitchExtremes){
-void computeNote(struct ItemPVector *itemVector, struct Attributes *currAttributes, struct Note *note, NotePitchExtreme *notePitchExtremes, enum Clef clef, StaffNumber staffIndex, float offset, float accidentalOffset){
-    float y = (GET_BIT(note->flags, NOTE_FLAG_REST)) ? 0 : positionFromCenter(clef, &note->pitch);
-
+void computeNote(struct ItemPVector *itemVector, struct Note *note, StaffNumber staffIndex, float offset, float accidentalOffset){
     if(GET_BIT(note->flags, NOTE_FLAG_ACCIDENTAL)){
         enum Meshes meshId = getAccidental(note);
         debugf("accidental meshid: %i\n", meshId);
         // enum Meshes meshId = NATURAL;
-        struct Item *item = itemMeshInit(meshId, staffIndex, offset, y);
+        struct Item *item = itemMeshInit(meshId, staffIndex, offset, note->y);
         note->item = item;
         ItemPVectorPush(itemVector, item);
     }
 
-    if(note->noteType == NOTE_TYPE_NULL){
-        note->noteType = noteDurationToType(note, currAttributes);
-        debugf("calculated note type: %i\n", note->noteType);
-    }
-
-    Pitch c = TO_PITCH(note->pitch);
-    notePitchExtremes[staffIndex][0] = MIN(y, c);
-    notePitchExtremes[staffIndex][1] = MAX(y, c);
-
     enum Meshes meshId = (GET_BIT(note->flags, NOTE_FLAG_REST)) ? noteRest(note) : noteHead(note);
-    struct Item *item = itemMeshInit(meshId, staffIndex, offset + accidentalOffset, y);
+    struct Item *item = itemMeshInit(meshId, staffIndex, offset + accidentalOffset, note->y);
     item->typeSubGroup = ITEM_GROUP_NOTE_HEAD;
     note->item = item;
     ItemPVectorPush(itemVector, item);
 }
 
-void computeNotes(struct ItemPVector *itemVector, struct Attributes *currAttributes, struct Notes *notes, NotePitchExtreme *notePitchExtremes, enum Clef clef, StaffNumber staffIndex, float offset, float accidentalOffset){
-    float min = 0, max = 0;
-    notesUpdateExtremes(notes, clef, &min, &max);
-    
-    if(notes->chordSize){
-        for(ChordSize c = 0; c < notes->chordSize; c++){
-            struct Note *note = notes->chord[c];
-            computeNote(itemVector, currAttributes, note, notePitchExtremes, clef, staffIndex, offset, accidentalOffset);
-        }
-    }
-    else{
-        computeNote(itemVector, currAttributes, notes->note, notePitchExtremes, clef, staffIndex, offset, accidentalOffset);
+#define ADD_NOTE_LINES(start, _diff, lineOffset){\
+    int lowerLines = (int)(_diff / 2.f + 1);\
+    debugf("lower lines %i <%f>\n", lowerLines, diff);\
+    for(int i = 0; i < lowerLines; i++){\
+        /* start of the note + the half */ \
+        float xNoteCenter = notes->x + width / 2.0f; \
+        struct Item *item = itemLineInit(staffIndex, xNoteCenter, start + (float)i * lineOffset, lineWidth); \
+        ItemPVectorPush(itemVector, item); \
+    }\
+}
+
+void computeNoteLines(StaffNumber staffIndex, struct Notes *notes, struct ItemPVector *itemVector){
+    // C
+    float firstLowerHelpLine = positionFromCenter(CLEF_G, &NOTE_PITCH(0, 4));
+    float firstUpperHelpLine = positionFromCenter(CLEF_G, &NOTE_PITCH(5, 5));
+
+    struct Note **chord = notes->chord;
+
+    fprintf(stderr, "%p %i\n", chord, notes->chordSize | 1);
+    float width = 0;
+    for(ChordSize c = 0; c < notes->chordSize; c++){
+        struct Note *note = chord[c];
+        width = MAX(width, MBB_MAX(note->item->meshId)[0]);
     }
 
-    struct Note *note = (notes->chordSize) ? notes->chord[0] : notes->note;
+    // debugf("<%f %f> %f %f\n", min, max, firstLowerHelpLine, firstUpperHelpLine);
+    // float positionFromCenter()
+    float lineWidth = width * 1.5f;
+    if(notes->minY <= firstLowerHelpLine){
+        float diff = firstLowerHelpLine - notes->minY;
+        ADD_NOTE_LINES(firstLowerHelpLine, diff, -2.0f);
+    }
+    
+    if(firstUpperHelpLine <= notes->maxY){
+        float diff = notes->maxY - firstUpperHelpLine;
+        // // debugf("%f - %f = %f\n", max, firstUpperHelpLine, d);
+        // int upperLines = (int)(d / 2.f + 1);
+        // debugf("upper lines %i <%f>\n", upperLines, d);
+        ADD_NOTE_LINES(firstUpperHelpLine, diff, 2.0f);
+    }
+}
+
+void computeNotes(struct ItemPVector *itemVector, struct Notes *notes, StaffNumber staffIndex, float offset, float accidentalOffset){
+    for(ChordSize c = 0; c < notes->chordSize; c++){
+        struct Note *note = notes->chord[c];
+        computeNote(itemVector, note, staffIndex, offset, accidentalOffset);
+        notes->width = MAX(notes->width, MBB_MAX(note->item->meshId)[0]);
+    }
+
+    struct Note *note = notes->chord[0];
+
+    if(GET_BIT(note->flags, NOTE_FLAG_REST) == 0){
+        computeNoteLines(staffIndex, notes, itemVector);
+    }
+
     // debugf("beams: %i\n", notes->beams);
     if(GET_BIT(note->flags, NOTE_FLAG_REST) == 0 && notes->beams == 0 && NOTE_TYPE_HALF <= note->noteType){
         if(note->noteType < NOTE_TYPE_EIGHTH){
@@ -357,18 +291,13 @@ void computeNotes(struct ItemPVector *itemVector, struct Attributes *currAttribu
 
         float closestBeamHeight;
         bool side;
-        steamPositions(&closestBeamHeight, &side, min, max);
+        steamPositions(&closestBeamHeight, &side, notes->minY, notes->maxY);
         
         float sign = (side == BEAM_UPPER_SIDE) ? 1 : -1;
         float beamYPosition = closestBeamHeight + BEAM_NOTE_HEAD_OFFSET * sign;
 
-        float beamOffet = (side == BEAM_UPPER_SIDE) ? 1 : 0; 
-        // float noteWidth
-        // struct Note *note = (notes->chordSize) ? notes->chord[0] : notes->note;
-        // return MBB_MAX(note->item->meshId)[0];
-
         // TODO: chords with dirrerent notes durations
-        addBeamSteam(notes, clef, staffIndex, itemVector, offset + accidentalOffset + beamOffet, beamYPosition);
+        addBeamSteam(notes, staffIndex, itemVector, beamYPosition);
 
         // if(FLAG1 <= meshId && meshId <= FLAG5){
         //     enum Meshes meshId = noteFlag(note);
@@ -380,16 +309,8 @@ void computeNotes(struct ItemPVector *itemVector, struct Attributes *currAttribu
 
 void notesUpdateExtremes(struct Notes *notes, enum Clef clef, float *rMin, float *rMax){
     float min = *rMin, max = *rMax;
-    if(notes->chordSize){
-        for(ChordSize i = 0; i < notes->chordSize; i++){
-            float y = positionFromCenter(clef, &notes->chord[i]->pitch);
-            min = MIN(min, y);
-            max = MAX(max, y);
-            // debugf("%f => min %f max %f\n", y, min, max);
-        }
-    }
-    else{
-        float y = positionFromCenter(clef, &notes->note->pitch);
+    for(ChordSize i = 0; i < notes->chordSize; i++){
+        float y = positionFromCenter(clef, &notes->chord[i]->pitch);
         min = MIN(min, y);
         max = MAX(max, y);
         // debugf("%f => min %f max %f\n", y, min, max);
@@ -399,7 +320,7 @@ void notesUpdateExtremes(struct Notes *notes, enum Clef clef, float *rMin, float
     *rMax = max;
 }
 
-float computeMeasure(struct Piano *piano, size_t measureIndex, struct ItemPVector *itemVector, struct Attributes *currAttributes, NotePitchExtreme *notePitchExtremes){
+float computeMeasure(struct Piano *piano, size_t measureIndex, struct ItemPVector *itemVector, struct Attributes *currAttributes, NotePitchExtreme *staffsNoteExtremes){
     struct Measure *measure = piano->measures[measureIndex];
     printf("\n\n");
     debugf("COMPUTING MEASURE %zu\n", measureIndex);
@@ -454,26 +375,35 @@ float computeMeasure(struct Piano *piano, size_t measureIndex, struct ItemPVecto
             }
         }
 
-        // check if the any of the notes has an accidental
-        float accidentalOffset = 0;
-        calculateAccidentalOffset(measure->staffs, staffNumber, d, &accidentalOffset);
+        // calculate all the widths that the note needs
+        // + add a correct note type if it only has a duration
+        float accidentalMaxWidth = 0;
+        float noteMaxWidht = 0;
+        float flagMaxWidth = 0;
+        calculateNotesSizes(measure->staffs, staffNumber, d, currAttributes, &accidentalMaxWidth, &noteMaxWidht, &flagMaxWidth);
 
         // for every staff
         for(StaffNumber s = 0; s < staffNumber; s++){
             Staff staff = measure->staffs[s];
             struct Notes *notes = staff[d];
             if(notes){
-                computeNotes(itemVector, currAttributes, notes, notePitchExtremes, currAttributes->clefs[s], s, offset, accidentalOffset);   
+                notes->x = offset + accidentalMaxWidth;
+                computeNotes(itemVector, notes, s, offset, accidentalMaxWidth);
+
+                staffsNoteExtremes[s][0] = MIN(staffsNoteExtremes[s][0], notes->minY);
+                staffsNoteExtremes[s][1] = MAX(staffsNoteExtremes[s][1], notes->maxY);
             }
         }
 
-        notesPositions[d] = offset + accidentalOffset;
-        offset += accidentalOffset + 1.0f;
+        noteMaxWidht = MAX(noteMaxWidht, MBB_MAX(QUATER_HEAD)[0]);
+
+        notesPositions[d] = offset + accidentalMaxWidth;
+        offset += accidentalMaxWidth + noteMaxWidht + flagMaxWidth;
     }
 
     // add beams for every staff
     for(StaffNumber s = 0; s < staffNumber; s++){
-        computeBeams(measure, s, currAttributes, itemVector, notesPositions);
+        computeBeams(measure, s, itemVector);
     }
 
     return offset;
@@ -491,12 +421,12 @@ void computeMeasures(struct Piano *piano){
     ItemPVectorPush(itemVector, itemInit(ITEM_BAR, MESH_NULL, 0, NULL));
 
     StaffNumber staffNumber = piano->measures[0]->attributes[0]->stavesNumber;
-    NotePitchExtreme *notePitchExtremes = calloc(staffNumber, sizeof(NotePitchExtreme));
+    NotePitchExtreme *staffsNoteExtremes = calloc(staffNumber, sizeof(NotePitchExtreme));
     debugf("staff number: %i\n", staffNumber);
 
     for(size_t i = 0; i < piano->measureSize; i++){
     // for(size_t i = 0; i < 1; i++){
-        float offset = computeMeasure(piano, i, itemVector, &currAttributes, notePitchExtremes);
+        float offset = computeMeasure(piano, i, itemVector, &currAttributes, staffsNoteExtremes);
 
         // add measue end bar
         struct Item *bar = itemInit(ITEM_BAR, MESH_NULL, 0, NULL);
@@ -522,8 +452,8 @@ void computeMeasures(struct Piano *piano){
         //
         //    max + two lines offset
         // C2 ------
-        float c1 = MAX(notePitchExtremes[s - 1][0], 4.5f + 4.0f);
-        float c2 = MAX(notePitchExtremes[s][1], 4.5f + 4.0f);
+        float c1 = MAX(staffsNoteExtremes[s - 1][0], 4.5f + 4.0f + BEAM_NOTE_HEAD_OFFSET);
+        float c2 = MAX(staffsNoteExtremes[s][1], 4.5f + 4.0f + BEAM_NOTE_HEAD_OFFSET);
         staffOffsets[s] = staffOffsets[s - 1] + (c1 + c2);
         debugf("staff %i offset %f %f => %f\n", s, c1, c2, staffOffsets[s]);
     }
@@ -531,7 +461,6 @@ void computeMeasures(struct Piano *piano){
     struct Sheet *sheet = malloc(sizeof(struct Sheet));
     sheet->measures = ItemMeasurePVectorDuplicate(itemMeasureV, &sheet->measuresSize);
     sheet->staffNumber = staffNumber;
-    sheet->extremePitches = notePitchExtremes;
     sheet->staffOffsets = staffOffsets;
 
     ItemMeasurePVectorFree(itemMeasureV);

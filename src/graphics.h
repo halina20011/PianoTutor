@@ -1,5 +1,5 @@
-#ifndef GRAPHICS
-#define GRAPHICS
+#ifndef __GRAPHICS__
+#define __GRAPHICS__
 
 #define GLEW_STATIC
 #include <GL/glew.h>
@@ -41,8 +41,16 @@ struct Graphics{
 struct Graphics *graphicsInit();
 void processPollEvents();
 
+// events
+void keyCallback(IGNORE GLFWwindow *w, int key, IGNORE int scancode, int action, IGNORE int mods);
+void cursorPosCallback(IGNORE GLFWwindow *w, double x, double y);
+void mouseButtonCallback(IGNORE GLFWwindow *w, int button, int action, IGNORE int modes);
+void scrollCallback(IGNORE GLFWwindow *w, IGNORE double x, double y);
+void framebufferSizeCallback(IGNORE GLFWwindow *w, int width, int height);
+
 void drawLine(float x1, float y1, float z1, float x2, float y2, float z2);
-void drawLineWeight(vec3 p1, vec3 p2, vec3 pos, float rotation, GLuint arrayBuffer, GLuint elementArrayBuffer, GLuint modelUniformLocation);
+void drawLineVec(vec3 p1, vec3 p2);
+void drawLineWeight(vec3 p1, vec3 p2, vec3 pos, vec3 scale, float thicnkess, GLint modelUniformLocation);
 
 struct Shader *graphicsShaderInit();
 

@@ -191,20 +191,14 @@ void printMeasure(struct Measure *measure){
         debugf("\n");
         printf("staff[%i]\n", staffIndex);
         // for every buffer place in staff
-        for(size_t measureNoteIndex = 0; measureNoteIndex < measure->measureSize; measureNoteIndex++){
-            struct Notes *notes = staff[measureNoteIndex];
+        for(Division d = 0; d < measure->measureSize; d++){
+            struct Notes *notes = staff[d];
             // check if place is not empty
             if(notes){
-                printf("  [%zu]: ", measureNoteIndex);
-                if(notes->chordSize){
-                    for(MeasureSize chordIndex = 0; chordIndex < notes->chordSize; chordIndex++){
-                        struct Note *n = notes->chord[chordIndex];
-                        printf("(%i:%i:%c) ", n->pitch.octave, n->pitch.step, n->pitch.stepChar);
-                    }
-                    printf("\n");
-                }
-                else{
-                    struct Note *n = notes->note;
+                printf("  [%i]: ", d);
+                for(ChordSize chordIndex = 0; chordIndex < notes->chordSize; chordIndex++){
+                    struct Note *n = notes->chord[chordIndex];
+                    
                     if(GET_BIT(n->flags, NOTE_FLAG_REST)){
                         printf("rest \n");
                     }
@@ -212,6 +206,7 @@ void printMeasure(struct Measure *measure){
                         printf("(%i:%i:%c)\n", n->pitch.octave, n->pitch.step, n->pitch.stepChar);
                     }
                 }
+                printf("\n");
             }
         }
     }
@@ -315,6 +310,7 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
         }
         else if(xmlStrcmp(children->name, XML_CHAR"note") == 0){
             bool isChord = false;
+            
             struct Note *note = parseNote(children, &staveIndex, &isChord);
             
             if(isChord){
