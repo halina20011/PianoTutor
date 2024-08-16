@@ -254,7 +254,7 @@ struct Measure **parseMeasures(xmlNodePtr part, size_t *measureSize){
 
 struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notesVectorMagazine, struct Attributes *currAtrributes){
     long measureNumber = parseProp(measure, "number");
-    debugf("measure number: %li\n", measureNumber);
+    // debugf("measure number: %li\n", measureNumber);
     struct Measure *m = malloc(sizeof(struct Measure));
     m->attributes = NULL;
     m->staffs = NULL;
@@ -286,7 +286,7 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
     }
 
     children = measure->xmlChildrenNode;
-    debugf("staffNumber: %i measureSize: %i attributes: %li\n", staffNumber, measureSize, numberOfAttributes);
+    // debugf("staffNumber: %i measureSize: %i attributes: %li\n", staffNumber, measureSize, numberOfAttributes);
 
     struct Attributes **attributes = NULL;
     Staff *staffs = malloc(sizeof(Staff*) * staffNumber);

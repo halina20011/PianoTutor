@@ -1,4 +1,5 @@
 #include "midiDevice.h"
+#include "piano.h"
 
 #define MIDI_MATCH_PATH "/dev/snd/midi*"
 
@@ -54,20 +55,11 @@ int getNumDataBytes(uint8_t statusByte) {
     }
 }
 
-uint8_t stepArray[] = {0, 2, 4, 5, 7, 9, 11};
-
-uint8_t toPitch(struct NotePitch *pitch){
-    uint8_t step = stepArray[pitch->step];
-    uint8_t r = (pitch->octave) * 12 + step + pitch->alter;
-    // debugf("%i %i %i\n", step, pitch->stepChar, r);
-    return r;
-}
-
 void sendNoteEvent(int midiDevice, uint8_t eventType, struct NotePitch *notePitch, uint8_t velocity){
     if(midiDevice == -1){
         return;
     }
-    uint8_t pitch = toPitch(notePitch);
+    uint8_t pitch = fromPitch(notePitch);
     // debugf("[%i:%i] => %i\n", notePitch->step, notePitch->octave, pitch);
     // debugf("MIDI message: %02X %02X %02X\n", eventType, pitch, velocity);
     // debugf("MIDI message: %03i %03i %03i\n", eventType, pitch, velocity);
@@ -75,8 +67,8 @@ void sendNoteEvent(int midiDevice, uint8_t eventType, struct NotePitch *notePitc
     write(midiDevice, message, sizeof(message));
 }
 
-void midiRead(int midiDevice, uint8_t *noteBuffer){
-    if(midiDevice == -1){
+void midiRead(struct Piano *piano){
+    if(piano->midiDevice == -1){
         return;
     }
     uint8_t statusByte = 0;
@@ -85,7 +77,7 @@ void midiRead(int midiDevice, uint8_t *noteBuffer){
     int numDataBytes = 0;
 
     while(1){
-        ssize_t bytesRead = read(midiDevice, &byte, sizeof(byte));
+        ssize_t bytesRead = read(piano->midiDevice, &byte, sizeof(byte));
         if(bytesRead < 0){
             return;
         }
@@ -102,14 +94,14 @@ void midiRead(int midiDevice, uint8_t *noteBuffer){
                 dataBytes[numDataBytes - 1] = byte;
                 numDataBytes--;
 
-                if (numDataBytes == 0){
+                if(numDataBytes == 0){
                     debugf("MIDI Event: Status=%i, Data1=%i, Data2=%i\n", statusByte, dataBytes[0], dataBytes[1]);
                     uint8_t note = dataBytes[1];
                     if(statusByte == NOTE_ON){
-                        noteBuffer[note] = 1;
+                        piano->playedNotes[note] = true;
                     }
                     else if(statusByte == NOTE_OFF){
-                        noteBuffer[note] = 0;
+                        piano->playedNotes[note] = true;
                     }
                     return;
                 }

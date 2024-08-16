@@ -246,7 +246,7 @@ void computeNoteLines(StaffNumber staffIndex, struct Notes *notes, struct ItemPV
 
     struct Note **chord = notes->chord;
 
-    fprintf(stderr, "%p %i\n", chord, notes->chordSize | 1);
+    // fprintf(stderr, "%p %i\n", chord, notes->chordSize | 1);
     float width = 0;
     for(ChordSize c = 0; c < notes->chordSize; c++){
         struct Note *note = chord[c];
@@ -299,11 +299,13 @@ void computeNotes(struct ItemPVector *itemVector, struct Notes *notes, StaffNumb
         // TODO: chords with dirrerent notes durations
         addBeamSteam(notes, staffIndex, itemVector, beamYPosition);
 
-        // if(FLAG1 <= meshId && meshId <= FLAG5){
-        //     enum Meshes meshId = noteFlag(note);
-        //     itemMeshInit(meshId, staffIndex, 0, 0);
-        //     itemFlagInit();
-        // }
+        enum Meshes meshId = noteFlag(note);
+        if(FLAG1 <= meshId && meshId <= FLAG5){
+            bool invert = (side == BEAM_UPWARDS);
+            // struct Item *item = itemMeshInit(meshId, staffIndex, offset + accidentalOffset, beamYPosition);
+            struct Item *item = itemFlagInit(meshId, staffIndex, offset + accidentalOffset, beamYPosition, notes->width, invert);
+            ItemPVectorPush(itemVector, item);
+        }
     }
 }
 

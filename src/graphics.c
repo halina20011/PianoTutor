@@ -6,14 +6,9 @@ extern struct Interface *interface;
 
 extern GLuint elementArrayBuffer;
 
-extern GLint shaderGlobalMatUniform;
-extern GLint modelShaderGlobalMatUniform;
-
-extern GLint shaderMatUniform;
-extern GLint modelShaderMatUniform;
-
-extern GLint shaderColorUniform;
-extern GLint modelShaderColorUniform;
+extern GLint globalMatUniform;
+extern GLint localMatUniform;
+extern GLint colorUniform;
 
 #define UNPACK3(val) val[0], val[1], val[2]
 
@@ -138,7 +133,7 @@ void drawLine(float x1, float y1, float z1, float x2, float y2, float z2){
         x1, y1, z1,
         x2, y2, z2,
     };
-    glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(line), line);
     glDrawArrays(GL_LINES, 0, 2);
 }
 
@@ -147,8 +142,22 @@ void drawLineVec(vec3 p1, vec3 p2){
         p1[0], p1[1], p1[2],
         p2[0], p2[1], p2[2],
     };
-    glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
+    // glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(line), line);
     glDrawArrays(GL_LINES, 0, 2);
+}
+
+void drawRectangle(float x1, float y1, float x2, float y2){
+    float line[] = {
+        x1, y1, 0,
+        x1, y2, 0,
+        x2, y1, 0,
+        x2, y2, 0,
+    };
+
+    // glBufferData(GL_ARRAY_BUFFER, sizeof(line), line, GL_DYNAMIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(line), line);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
 void drawLineWeight(vec3 p1, vec3 p2, vec3 pos, vec3 scale, float thicnkess, GLint modelUniformLocation){
@@ -180,7 +189,8 @@ void drawLineWeight(vec3 p1, vec3 p2, vec3 pos, vec3 scale, float thicnkess, GLi
 
     glUniformMatrix4fv(modelUniformLocation, 1, GL_FALSE, (float*)mat);
 
-    glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_DYNAMIC_DRAW);
+    // glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_DYNAMIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(points), points);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
@@ -238,22 +248,16 @@ struct Graphics *graphicsInit(){
     glClearColor(0, 0, 0, 1);
 
     interface->shader = graphicsShaderInit();
-    interface->modelShader = graphicsShaderInit();
 
-    useShader(interface->shader);
-    shaderGlobalMatUniform = getUniformLocation(interface->shader, "globalMatrix");
-    shaderMatUniform = getUniformLocation(interface->shader, "modelMatrix");
-    shaderColorUniform = getUniformLocation(interface->shader, "color");
-    SET_COLOR(shaderColorUniform, WHITE);
+    globalMatUniform = getUniformLocation(interface->shader, "globalMatrix");
+    localMatUniform = getUniformLocation(interface->shader, "modelMatrix");
+    colorUniform = getUniformLocation(interface->shader, "color");
+    SET_COLOR(colorUniform, WHITE);
 
-    useShader(interface->modelShader);
-    modelShaderGlobalMatUniform = getUniformLocation(interface->shader, "globalMatrix");
-    modelShaderMatUniform = getUniformLocation(interface->modelShader, "modelMatrix");
-    modelShaderColorUniform = getUniformLocation(interface->shader, "color");
-    SET_COLOR(modelShaderColorUniform, WHITE);
 
     glGenBuffers(1, &elementArrayBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, elementArrayBuffer);
+    useShader(interface->shader);
 
     g->window = window;
     interface->g = g;
@@ -263,12 +267,6 @@ struct Graphics *graphicsInit(){
 
 struct Shader *graphicsShaderInit(){
     struct Shader *shader = shaderInit(VERTEX_SHADER, FRAGMENT_SHADER);
-    glGenVertexArrays(1, &shader->vao);
-    glBindVertexArray(shader->vao);
-    glGenBuffers(1, &shader->vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, shader->vbo);
-    
-    useShader(shader);
 
     GLint posAttrib = glGetAttribLocation(shader->program, "position");
     glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, 0);

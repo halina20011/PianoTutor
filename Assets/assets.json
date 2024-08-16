@@ -48,5 +48,12 @@
         "sharp",
         "natural",
         "flat"
+    ],
+    "lines": [
+        "lines"
+    ],
+    "keyboard": [
+        "C", "D", "E", "F", "G", "A", "H",
+        "C#", "D#", "F#", "G#", "A#"
     ]
 }

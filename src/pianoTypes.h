@@ -64,12 +64,15 @@ enum Meshes{
     NATURAL,
     FLAT,
 
-    TEXT_START,
-    TEXT_START1,
-    TEXT_START2,
-    TEXT_START3,
+    C, D, E, F, G, A, H,
+    C_SHARP, D_SHARP, F_SHARP, G_SHARP, A_SHARP,
+    LINES,
 
-    MESHES_SIZE = TEXT_START + 11,
+    NOTE_START,
+
+    TEXT_START = NOTE_START + 12,
+
+    MESHES_SIZE = TEXT_START + 10,
 };
 
 struct ItemMesh{
@@ -95,7 +98,7 @@ struct ItemLine{
 
 struct ItemFlag{
     bool inverted;
-    float xPosition, yPosition;
+    float xPosition, yPosition, width;
 };
 
 enum ItemType{
@@ -133,14 +136,40 @@ NEW_VECTOR_TYPE(struct Item*, ItemPVector);
 NEW_VECTOR_TYPE(struct Item**, ItemPPVector);
 NEW_VECTOR_TYPE(struct ItemMeasure*, ItemMeasurePVector);
 
+#define NOTE_PRESS_BUFFER_SIZE 128
+
+struct Keyboard{
+    float keyboardWidth;
+    // index where where on gpu starts the keys
+    size_t whiteKeysDataStartOffset, blackKeysDataStartOffset, linesDataStartOffset;
+    // keyboard mesh keys that are loaded at the start from global mesh
+    float *keys;
+    // map of notePitch => mesh start, that is used for drawing pressed notes
+    size_t *keysDataStart;
+    size_t whiteKeysTrigCount, blackKeysTrigCount;
+    size_t linesTrigCount;
+};
+
 struct Piano{
     float cursor;
     size_t currMeasure;
     struct Measure **measures;
     size_t measureSize;
 
+    size_t meshesDataStartOffset;
     size_t *meshesDataStart, *meshesDataSize;
+    
+    struct Keyboard keyboard;
+
     struct Sheet *sheet;
+    int midiDevice;
+
+    struct PressedNotePVector *pressedNotesVector;
+
+    // notes that are being played by the sheet
+    bool playedNotes[NOTE_PRESS_BUFFER_SIZE];
+    // notes that re being pressed by the user
+    uint8_t pressedNotes[NOTE_PRESS_BUFFER_SIZE];
 };
 
 struct PressedNote{

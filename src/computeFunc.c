@@ -59,6 +59,16 @@ struct Item *itemLineInit(StaffNumber staffIndex, float xCenter, float y, float 
     return itemInit(ITEM_LINE, MESH_NULL, staffIndex, line);
 }
 
+struct Item *itemFlagInit(enum Meshes id, StaffNumber staffIndex, float x, float y, float width, bool inverted){
+    struct ItemFlag *flag = malloc(sizeof(struct ItemFlag));
+    flag->xPosition = x;
+    flag->yPosition = y;
+    flag->width = width;
+    flag->inverted = inverted;
+
+    return itemInit(ITEM_FLAG, id, staffIndex, flag);
+}
+
 // TODO: create an map array
 enum Meshes noteHead(struct Note *note){
     switch(note->noteType){
@@ -114,7 +124,7 @@ enum Meshes noteRest(struct Note *note){
 
 enum Meshes noteFlag(struct Note *note){
     if(NOTE_TYPE_EIGHTH <= note->noteType){
-        return NOTE_TYPE_EIGHTH + FLAG1;
+        return FLAG1 + NOTE_TYPE_EIGHTH - note->noteType;
     }
 
     return MESH_NULL;

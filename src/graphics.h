@@ -51,6 +51,7 @@ void framebufferSizeCallback(IGNORE GLFWwindow *w, int width, int height);
 void drawLine(float x1, float y1, float z1, float x2, float y2, float z2);
 void drawLineVec(vec3 p1, vec3 p2);
 void drawLineWeight(vec3 p1, vec3 p2, vec3 pos, vec3 scale, float thicnkess, GLint modelUniformLocation);
+void drawRectangle(float x1, float y1, float x2, float y2);
 
 struct Shader *graphicsShaderInit();
 

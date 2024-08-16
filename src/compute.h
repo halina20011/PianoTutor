@@ -44,6 +44,7 @@ struct Item *itemMeshInit(enum Meshes meshId, StaffNumber staffIndex, float xPos
 struct Item *itemStemInit(StaffNumber staffIndex, float xPosition, float noteOffset, float y1, float y2);
 struct Item *itemBeamInit(StaffNumber staffIndex, float x1, float w1, float x2, float w2, float yPosition);
 struct Item *itemLineInit(StaffNumber staffIndex, float xCenter, float y, float width);
+struct Item *itemFlagInit(enum Meshes id, StaffNumber staffIndex, float x, float y, float width, bool inverted);
 
 
 void computeKeySignature(KeySignature keySignature, struct ItemPVector *itemsVector, StaffNumber staffNumber, float *offset);
@@ -62,6 +63,8 @@ void computeBeams(struct Measure *measure, StaffNumber staffIndex, struct ItemPV
 enum NoteType noteDurationToType(struct Note *note, struct Attributes *currAttributes);
 enum Meshes noteHead(struct Note *note);
 enum Meshes noteRest(struct Note *note);
+enum Meshes noteFlag(struct Note *note);
+
 void computeNote(struct ItemPVector *itemVector, struct Note *note, StaffNumber staffIndex, float offset, float accidentalOffset);
 void computeNotes(struct ItemPVector *itemVector, struct Notes *notes, StaffNumber staffIndex, float offset, float accidentalOffset);
 

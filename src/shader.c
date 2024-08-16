@@ -1,6 +1,6 @@
 #include "./shader.h"
 
-GLint compileShader(const char *shaderSource, int type){
+GLuint compileShader(const char *shaderSource, int type){
     // debugf("%s\n", shaderSource);
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, (const char * const*)&shaderSource, NULL);
@@ -21,8 +21,8 @@ GLint compileShader(const char *shaderSource, int type){
 struct Shader *shaderInit(const char vertexShaderSource[], const char fragmentShaderSource[]){
     struct Shader *s = malloc(sizeof(struct Shader));
 
-    GLint vertexShader = compileShader(vertexShaderSource, GL_VERTEX_SHADER);
-    GLint fragmentShader = compileShader(fragmentShaderSource, GL_FRAGMENT_SHADER);
+    GLuint vertexShader = compileShader(vertexShaderSource, GL_VERTEX_SHADER);
+    GLuint fragmentShader = compileShader(fragmentShaderSource, GL_FRAGMENT_SHADER);
 
     s->program = glCreateProgram();
 
@@ -56,6 +56,7 @@ struct Shader *shaderInit(const char vertexShaderSource[], const char fragmentSh
 
 // wrapper around glGetUniformLocation to show errors
 GLint getUniformLocation(struct Shader *shader, const GLchar *name){
+    debugf("shader %p\n", shader);
     GLint _uniformLocation = glGetUniformLocation(shader->program, name);
     if(_uniformLocation == -1){
         fprintf(stderr, "failed to get uniform location from \"%s\"\n", name);

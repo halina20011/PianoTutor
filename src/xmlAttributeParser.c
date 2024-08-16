@@ -179,6 +179,7 @@ void parseClef(xmlNodePtr part, struct Attributes *a, struct Attributes *currAtr
                 fprintf(stderr, "missing feature 'clef => sign => %s'\n", content);
                 exit(1);
             }
+            free(content);
         }
         else if(xmlStrcmp(children->name, XML_CHAR"clef-octave-change") == 0){
             change = (uint8_t)parseBody(children);

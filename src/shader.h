@@ -10,14 +10,22 @@
 
 #include "helpers.h"
 
+enum BufferObjects{
+    MESH_VERTEX_BUFFER_OBJECT,
+    DRAW_VERTEX_BUFFER_OBJECT,
+    KEYBOARD_VERTEX_BUFFER_OBJECT
+};
+
 struct Shader{
     GLint program;
     // vertex array object
-    //  stores the vertex attributes
+    // stores the vertex attributes
     GLuint vao;
     // vertex buffer object
     GLuint vbo;
 };
+
+GLuint compileShader(const char *shaderSource, int type);
 
 struct Shader *shaderInit(const char vertexShaderSource[], const char fragmentShaderSource[]);
 GLint getUniformLocation(struct Shader *shader, const GLchar *name);

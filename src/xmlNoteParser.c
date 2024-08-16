@@ -71,7 +71,6 @@ void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size
         // then the buffer with this index will be set to NULL
         if(notesVectorMagazine->size <= i || notesVectorMagazine->data[i]->size == 0){
             staff[i] = NULL;
-            fprintf(stderr, "%li 0\n", i);
         }
         else if(i < notesVectorMagazine->size && 0 < notesVectorMagazine->data[i]->size){
             // debugf("%i m p %p\n", i, notesVectorMagazine->data[i]);
@@ -108,13 +107,13 @@ void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size
                 struct Note **chord = malloc(sizeof(struct Note*));
                 chord[0] = lastNote;
                 notes->chord = chord;
-                printf("last note %p %p\n", lastNote, notes->chord);
+                // debugf("last note %p %p\n", lastNote, notes->chord);
                 notes->chordSize = 1;
                 notes->beams = lastNote->beams;
             }
             else{
                 struct Note **chord = malloc(sizeof(struct Note*) * noteCounter);
-                printf("new chord %p\n", chord);
+                // debugf("new chord %p\n", chord);
 
                 for(size_t j = 0; j < notesVector->size; j++){
                     struct Note *note = notesVector->data[j];
@@ -122,7 +121,7 @@ void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size
                         chord[j] = note;
                     }
                     else{
-                        fprintf(stderr, "is rest dlkfjsad;lfkja;sldfjas");
+                        fprintf(stderr, "note in chord is a rest");
                         exit(1);
                     }
                 }
@@ -132,7 +131,7 @@ void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size
                 notes->beams = chord[0]->beams;
             }
 
-            printf("chord p: %p\n", notes->chord);
+            // debugf("chord p: %p\n", notes->chord);
             staff[i] = notes;
 
             // debugf("flushed note's beams %i\n", notes->beams);
@@ -165,6 +164,7 @@ Pitch parseStep(char c){
 
 #define MATCH(str, enum){\
     if(strcmp(content, str) == 0){\
+        free(content);\
         return enum;\
     }\
 }
@@ -189,6 +189,7 @@ enum NoteType parseNoteType(xmlNodePtr node){
     MATCH("1024th",    NOTE_TYPE_1024TH);
 
     fprintf(stderr, "note type '%s', not found\n", content);
+    free(content);
     exit(1);
 }
 
@@ -198,9 +199,11 @@ void parsePitch(xmlNodePtr node, struct Note *note){
     while(children){
         // https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/step/
         if(xmlStrcmp(children->name, XML_CHAR"step") == 0){
-            char c = xmlNodeGetContent(children)[0];
+            char *content = (char*)xmlNodeGetContent(children);
+            char c = content[0];
             note->pitch.step = parseStep(c);
             note->pitch.stepChar = c;
+            free(content);
         }
         else if(xmlStrcmp(children->name, XML_CHAR"alter") == 0){
             long alter = parseBody(children);
@@ -233,8 +236,8 @@ void parseAccidental(xmlNodePtr parent, struct Note *note){
     else if(xmlStrcmp(body, XML_CHAR"flat") == 0){
         SET_BIT(note->flags, NOTE_FLAG_FLAT);
     }
-
-    debugf("accidental: %i\n", note->flags);
+    free(body);
+    // debugf("accidental: %i\n", note->flags);
 }
 
 void parseNotations(xmlNodePtr parent, struct Note *note){
@@ -291,5 +294,6 @@ void parseBeam(xmlNodePtr parent, Beams *rBeams){
     }
 
     SET_BEAM(*rBeams, number, beam);
+    free(body);
     // debugf("beam[%i] val: %i => %i\n", number, beam, *rBeams);
 }

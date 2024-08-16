@@ -14,6 +14,8 @@ LDFLAGS = -lc -lm \
 CPPFLAGS = $(shell xml2-config --cflags)
 CFLAGS = -Wall -Wextra -Wshadow
 
+# CFLAGS += -D'FUNCTION_CHECKER=' -finstrument-functions
+
 .PHONY: update urun
 
 db: 
@@ -79,6 +81,10 @@ update:
 
 urun: update run
 
-debug: CFLAGS += -O0 -ggdb
+debug: CFLAGS += -O0 -ggdb -fstack-protector-all -fsanitize=address
 debug: main
 	gdb -ex "set debuginfod enabled off" -ex "set args $(flags)" -ex run ./build/main
+
+debugMan: CFLAGS += -O0 -ggdb
+debugMan: main
+	gdb -ex "set debuginfod enabled off" -ex "set args $(flags)" ./build/main

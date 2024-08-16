@@ -137,6 +137,11 @@ def getObjects():
     models["text"] = {};
     for i in range(10):
         models["text"][str(i)] = str(i);
+    
+    models["notes"] = {};
+    for i in range(12):
+        noteName = f"note{i}"
+        models["notes"][noteName] = noteName;
 
     for itemType in models:
         types = models[itemType];

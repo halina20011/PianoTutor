@@ -15,7 +15,8 @@ struct Interface{
 
     struct Graphics *g;
     struct Text *text;
-    struct Shader *shader, *modelShader;
+    // struct Shader *shader, *modelShader;
+    struct Shader *shader;
     struct Piano *piano;
 
     bool showBoudningBox;

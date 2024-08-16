@@ -19,6 +19,7 @@
 // TODO: use correct tempto from Song struct
 // TODO: create note sheet window
 
+// TODO: bounding box as static mesh
 // TODO: add note flags
 // TODO: repeats
 // TODO: correct division
@@ -74,14 +75,9 @@ struct InputParser inputParser = {
 struct Interface *interface = NULL;
 GLuint elementArrayBuffer = 0;
 
-GLint shaderGlobalMatUniform = 0;
-GLint modelShaderGlobalMatUniform = 0;
-
-GLint shaderMatUniform = 0;
-GLint modelShaderMatUniform = 0;
-
-GLint shaderColorUniform = 0;
-GLint modelShaderColorUniform = 0;
+GLint globalMatUniform = 0;
+GLint localMatUniform = 0;
+GLint colorUniform = 0;
 
 int main(int argc, char **argv){
     parseInput(inputParser, argc, argv);
@@ -111,6 +107,11 @@ int main(int argc, char **argv){
         fprintf(stderr, "no xml or midi file specified\n");
         return 1;
     }
+    
+    // uint8_t buffer[300] = {};
+    // while(1){
+    //     midiRead(midiDevice, buffer);
+    // }
 
     size_t measuresSize = 0;
     struct Measure **measures = readNotes(mxlFilePath, &measuresSize);
@@ -119,15 +120,14 @@ int main(int argc, char **argv){
 
     // piano->measureSize = 12;
     computeMeasures(piano);
+    computeKeyboard(piano, &(struct NotePitch){0, 0, 0, 0}, &(struct NotePitch){6, 6, 0, 0});
 
-    // int midiDevice = midiDeviceInit("auto");
-    int midiDevice = -1;
     // while(!glfwWindowShouldClose(interface->g->window)){
     //     drawSheet(piano);
     //     // exit(1);
     // }
 
-    pianoPlaySong(piano, midiDevice);
+    pianoPlaySong(piano);
 
     glfwTerminate();
     return 0;

@@ -17,7 +17,7 @@
 #define NOTE_OFF 0x80
 
 int midiDeviceInit(char *path);
-void midiRead(int fd, uint8_t *noteBuffer);
+void midiRead(struct Piano *piano);
 void sendNoteEvent(int midiDevice, uint8_t eventType, struct NotePitch *pitch, uint8_t velocity);
 
 #endif
