@@ -1,8 +1,6 @@
 #include <stdio.h>
 
-// #include "midiParser.h"
-// #include "piano.h"
-// #include "sheets.h"
+
 #include "inputParser.h"
 
 #include "interface.h"
@@ -10,30 +8,22 @@
 #include "xmlParser.h"
 #include "piano.h"
 
-// void test(uint8_t *data){
-//     uint32_t i = 0;
-//     uint32_t r = variableLengthValue(data, &i);
-//     debugf("%X %u\n", r, r);
-// }
-
 // TODO: use correct tempto from Song struct
-// TODO: create note sheet window
 
-// TODO: bounding box as static mesh
-// TODO: add note flags
+// TODO: draw keyboard notes
 // TODO: repeats
 // TODO: correct division
 // TODO: learnSong
-// TODO: keyboard
 // TODO: pickup measure => strip start and end
 // TODO: correct bpm
 // TODO: tuplets
 // TODO: bars
 // TODO: tie
+// TODO: bounding box as static mesh
 
 // OPTIONS
 bool printHelp = false;
-char *midiFilePath = NULL, *mxlFilePath = NULL;
+char *mxlFilePath = NULL;
 char *midiDevicePath;
 char *mode;
 char *difficulty;
@@ -55,7 +45,6 @@ struct InputParser inputParser = {
     {
         FLAG_2_SIZE("-h", "--help", &printHelp, INPUT_TYPE_SWITCH, "print this help message"),
         FLAG_2_SIZE("-f", "--file", &mxlFilePath, INPUT_TYPE_STR, "specifi mxl file"),
-        FLAG_2_SIZE("-m", "--midi", &midiFilePath, INPUT_TYPE_STR, "specifi midi file"),
         FLAG_1_SIZE("--device", &midiDevicePath, INPUT_TYPE_STR, "specifi path to midi device\n\
                 options: \"auto\", [absolutePath] [onlyMidiDeviceName]\n\
                 auto option will use any device that matches /dev/snd/midi* (default value is auto)"),
@@ -92,27 +81,11 @@ int main(int argc, char **argv){
     interface->paused = true;
     interface->showBoudningBox = 0;
     
-    // TODO: max percisionLevel is 10 ^ 9 so it would fit in uint32_t and float has limited number of fraction
-    // uint32_t percision = pow(10, percisionLevel);
-    //
-    // struct MidiSheet sheet;
-    // struct MidiNoteDuration *validNotes = generateValidNotes(percision, &sheet.validNotesSize);
-    // sheet.validNotes = validNotes;
-    // if(showNotes){
-    //     validNotesPrint(validNotes, sheet.validNotesSize);
-    //     return 0;
-    // }
-
-    if(mxlFilePath == NULL && midiFilePath == NULL){
-        fprintf(stderr, "no xml or midi file specified\n");
+    if(mxlFilePath == NULL){
+        fprintf(stderr, "no xml file specified\n");
         return 1;
     }
     
-    // uint8_t buffer[300] = {};
-    // while(1){
-    //     midiRead(midiDevice, buffer);
-    // }
-
     size_t measuresSize = 0;
     struct Measure **measures = readNotes(mxlFilePath, &measuresSize);
 
@@ -122,39 +95,8 @@ int main(int argc, char **argv){
     computeMeasures(piano);
     computeKeyboard(piano, &(struct NotePitch){0, 0, 0, 0}, &(struct NotePitch){6, 6, 0, 0});
 
-    // while(!glfwWindowShouldClose(interface->g->window)){
-    //     drawSheet(piano);
-    //     // exit(1);
-    // }
-
     pianoPlaySong(piano);
 
     glfwTerminate();
-    return 0;
-    // struct MidiSong *song = midiParser(midiFilePath);
-    // struct MidiSongInfo songInfo = {percision, upbeatDur,upbeatRestDur, NULL, 0};
-    // songsNoteDurations(song, &songInfo, &sheet, printSongsNoteDurations);
-    //
-    // if(printSongsNoteDurations){
-    //     return 0;
-    // }
-    // 
-    // if(correctionFilePath){
-    //     correctDurations(correctionFilePath, &songInfo, &sheet);
-    // }
-    //
-    // generateMeasure(song, &songInfo, &sheet);
-    // generateSheet(song, songInfo);
-    //
-    // // return 0;
-    // int midiDevice = midiDeviceInit("auto");
-    // uint8_t trackMask = 1;
-    // uint8_t noteMask = (1 << C);
-    // // uint8_t noteMask = 0xff;
-    // // selectRegion(song, trackMask);
-    // pianoInit();
-    // playSong(song, midiDevice, noteMask);
-    // // learnSong(song, TUTORIAL, trackMask, noteMask);
-    // pianoExit();
     return 0;
 }

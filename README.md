@@ -9,6 +9,12 @@ This is also meant to be FOSS tool/app as a replacement to a lot of paied option
 #### Old Images
 <img src="Images/previewOld1.png" alt="preview1" width="100%">
 
+### build
+```bash
+make init
+make
+```
+
 ## Dependencies
 - glew (opengl)
 - glfw3

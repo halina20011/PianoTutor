@@ -3,7 +3,7 @@
 void debugPrint(const char *file, int line, const char *format, ...){
     va_list args;
     va_start(args, format);
-    printf("[%s:%i] ", file, line);
+    printf("\x1b[38;2;0;255;255m[%s:%i]\x1b[0m ", basename(file), line);
     vprintf(format, args);
     va_end(args);
 }

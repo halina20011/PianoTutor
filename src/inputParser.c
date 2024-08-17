@@ -44,15 +44,15 @@ void printHelpMessage(struct InputParser inputParser){
 
     int messageSize = (windowSize) ? windowSize - flagsSize : 0;
 
-    debugf("usage: [flag] [option]\n");
+    printf("usage: [flag] [option]\n");
     for(size_t i = 0; i < inputParser.inputsSize; i++){
         struct Input input = inputParser.inputs[i];
         char *str = joinFlags(input, inputParser.flagsOffset, inputParser.flagsColSize);
-        debugf("%s", str);
+        printf("%s", str);
         free(str);
 
         if(messageSize == 0){
-            debugf("%s\n", input.message);
+            printf("%s\n", input.message);
         }
         else{
             char *mPtr = input.message;
@@ -63,12 +63,12 @@ void printHelpMessage(struct InputParser inputParser){
                 }
 
                 if(*mPtr == '\n'){
-                    debugf("\n%s", empty);
+                    printf("\n%s", empty);
                     mPtr++;
                     size = 0;
                 }
                 else if(messageSize <= size){
-                    debugf("%s", empty);
+                    printf("%s", empty);
                     size = 0;
                 }
                 else{
@@ -77,7 +77,7 @@ void printHelpMessage(struct InputParser inputParser){
                 }
             }
         }
-        debugf("\n");
+        printf("\n");
     }
 }
 
@@ -85,7 +85,7 @@ void parseInput(struct InputParser inputParser, int argc, char **argv){
     for(int i = 1; i < argc; i++){
         bool matches = false;
         for(size_t j = 0; j < inputParser.inputsSize && !matches; j++){
-            // debugf("j %i\n", j);
+            // printf("j %i\n", j);
             struct Input input = inputParser.inputs[j];
             uint8_t indexMatch = 0;
             for(int f = 0; f < input.flagsSize && !matches; f++){
@@ -100,7 +100,7 @@ void parseInput(struct InputParser inputParser, int argc, char **argv){
                     fprintf(stderr, "wrong numer of arguments for flag %s\n", input.flags[indexMatch]);
                     exit(1);
                 }
-                debugf("match \"%s\"\n", input.flags[indexMatch]);
+                printf("match \"%s\"\n", input.flags[indexMatch]);
                 switch(input.dataType){
                     case INPUT_TYPE_NONE:
                         break;
@@ -117,7 +117,7 @@ void parseInput(struct InputParser inputParser, int argc, char **argv){
                         *((uint8_t*)input.variable) = strtol(argv[i + 1], NULL, 10);
                         break;
                     case INPUT_TYPE_FLOAT:
-                        debugf("float: %s\n", argv[i + 1]);
+                        printf("float: %s\n", argv[i + 1]);
                         *((float*)input.variable) = strtof(argv[i + 1], NULL);
                         break;
                     default:
