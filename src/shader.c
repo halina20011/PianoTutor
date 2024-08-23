@@ -56,7 +56,7 @@ struct Shader *shaderInit(const char vertexShaderSource[], const char fragmentSh
 
 // wrapper around glGetUniformLocation to show errors
 GLint getUniformLocation(struct Shader *shader, const GLchar *name){
-    debugf("shader %p\n", shader);
+    // debugf("shader %p\n", shader);
     GLint _uniformLocation = glGetUniformLocation(shader->program, name);
     if(_uniformLocation == -1){
         fprintf(stderr, "failed to get uniform location from \"%s\"\n", name);

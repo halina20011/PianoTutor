@@ -139,6 +139,7 @@ NEW_VECTOR_TYPE(struct ItemMeasure*, ItemMeasurePVector);
 #define NOTE_PRESS_BUFFER_SIZE 128
 
 struct Keyboard{
+    uint8_t firstOctave;
     float keyboardWidth;
     // index where where on gpu starts the keys
     size_t whiteKeysDataStartOffset, blackKeysDataStartOffset, linesDataStartOffset;
@@ -148,11 +149,10 @@ struct Keyboard{
     size_t *keysDataStart;
     size_t whiteKeysTrigCount, blackKeysTrigCount;
     size_t linesTrigCount;
+    float octaveWidth;
 };
 
 struct Piano{
-    float cursor;
-    size_t currMeasure;
     struct Measure **measures;
     size_t measureSize;
 
@@ -164,31 +164,38 @@ struct Piano{
     struct Sheet *sheet;
     int midiDevice;
 
-    struct PressedNotePVector *pressedNotesVector;
 
     // notes that are being played by the sheet
-    bool playedNotes[NOTE_PRESS_BUFFER_SIZE];
+    uint8_t playedNotes[NOTE_PRESS_BUFFER_SIZE];
+    struct PlayedNotePVector *playedNotesVector;
+    
     // notes that re being pressed by the user
     uint8_t pressedNotes[NOTE_PRESS_BUFFER_SIZE];
+    struct PressedNoteVector *pressedNotesVector;
 };
-
-struct PressedNote{
-    Division endDivision;
-    struct Note *note;
-};
-
-NEW_VECTOR_TYPE(struct PressedNote*, PressedNotePVector);
 
 struct Sheet{
+    float cursor;
+    size_t currMeasure;
+
     struct ItemMeasure **measures;
+    // struct NotePitchExtreme *notePitchExtreme;
     size_t measuresSize;
     StaffNumber staffNumber;
     float *staffOffsets;
+    struct PitchExtreme *staffsPitchExtreme;
 };
 
 struct MeshBoundingBox{
     float min[3];
     float max[3];
 };
+
+struct PlayedNote{
+    Division endDivision;
+    struct Note *note;
+};
+
+NEW_VECTOR_TYPE(struct PlayedNote*, PlayedNotePVector);
 
 #endif

@@ -1,4 +1,5 @@
 flags = -f ~/Documents/Notes/Megalovania.mxl
+# flags = -f ~/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mxl
 # flags = -f ~/Documents/Notes/Mr_Doctor_Man_-_Palaye_Royale.mxl
 # flags = -f ~/Documents/Notes/ainekuraine.mxl
 # flags = -f ~/Documents/Notes/Bad_Apple_Original_ver.mxl
@@ -9,7 +10,6 @@ flags = -f ~/Documents/Notes/Megalovania.mxl
 # flags = -f ~/Documents/Notes/Pirates_of_The_Caribbean_Medley.mxl
 # flags = -f ~/Documents/Notes/Rats.mxl
 # flags = -f ~/Documents/Notes/Shreksophone__Shrek_and_Donkey.mxl
-# flags = -f ~/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mxl
 # flags = -f ~/Documents/MuseScore4/Scores/test.mxl
 
 run: make

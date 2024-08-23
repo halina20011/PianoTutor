@@ -93,9 +93,13 @@ int main(int argc, char **argv){
 
     // piano->measureSize = 12;
     computeMeasures(piano);
-    computeKeyboard(piano, &(struct NotePitch){0, 0, 0, 0}, &(struct NotePitch){6, 6, 0, 0});
+    // computeKeyboard(piano, &(struct NotePitch){0, 0, 0, 0}, &(struct NotePitch){6, 6, 0, 0});
+    Pitch start = piano->sheet->staffsPitchExtreme[piano->sheet->staffNumber - 1].min;
+    Pitch end = piano->sheet->staffsPitchExtreme[0].max;
+    computeKeyboard(piano, start, end);
 
     pianoPlaySong(piano);
+    // pianoLearnSong(piano);
 
     glfwTerminate();
     return 0;

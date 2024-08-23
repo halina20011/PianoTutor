@@ -34,12 +34,16 @@ typedef uint8_t Beam;
 typedef uint32_t Beams;
 
 typedef uint8_t Pitch;
+
+#define PITCH_MIN 0
+#define PITCH_MAX UINT8_MAX
+
 typedef uint8_t NoteFlags;
 typedef uint16_t NoteDuration;
 typedef uint8_t Tuplet;
 typedef uint16_t MeasureSize;
 
-typedef float NotePitchExtreme[2];
+typedef float NotePositionExtreme[2];
 
 typedef uint8_t ChordSize;
 

@@ -84,6 +84,14 @@ struct NotePitch{
     uint8_t alter;
 };
 
+struct PitchExtreme{
+    Pitch min, max;
+};
+
+struct NotePitchExtreme{
+    struct NotePitch min, max;
+};
+
 struct Note{
     uint8_t dots;
     Beams beams;
@@ -115,6 +123,7 @@ typedef struct Notes** Staff;
 struct Measure{
     uint16_t sheetMeasureIndex;
     Staff *staffs;
+    struct PitchExtreme *pitchExtreme;
     struct Attributes **attributes;
     StaffNumber stavesNumber;
     MeasureSize measureSize;
@@ -125,15 +134,18 @@ void updateAttributes(struct Attributes *attributes, struct Attributes *currAttr
 long parseBody(xmlNodePtr part);
 long parseProp(xmlNodePtr note, char *name);
 
+Pitch notePitchToPitch(struct NotePitch *pitch);
 
 void printMeasure(struct Measure *measure);
 void printMeasures(struct MeasurePVector *measuresVector);
 
 struct Measure **readNotes(char filePath[], size_t *measureSize);
+void measurePitchExtreme(struct Measure *measure, struct Note *note, StaffNumber staffIndex);
 struct Measure **parseMeasures(xmlNodePtr part, size_t *measureSize);
 struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notesVectorMagazine, struct Attributes *currAtrributes);
 struct Attributes *parseAttributes(xmlNodePtr part, struct Attributes *currAtrributes);
 
+// ./xmlNoteParser.c
 struct Note *parseNote(xmlNodePtr part, StaffNumber *staveIndex, bool *isChord);
 void notesMagazinePrint(struct NoteVectorPVector *notesVectorMagazine);
 void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size_t measureNoteSize);

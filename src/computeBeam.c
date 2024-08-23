@@ -138,7 +138,7 @@ void computeBeams(struct Measure *measure, StaffNumber staffIndex, struct ItemPV
         }
     }
 
-    debugf("max beam depth: %i\n", maxBeamDepth);
+    // debugf("max beam depth: %i\n", maxBeamDepth);
 
     if(!maxBeamDepth){
         return;
@@ -191,7 +191,7 @@ void computeBeams(struct Measure *measure, StaffNumber staffIndex, struct ItemPV
         // beam that is bellow the center must go upwards => the above has to go downwards
         float beamOffset = (side == BEAM_UPPER_SIDE) ? -BEAM_OFFSET : BEAM_OFFSET;
 
-        debugf("beam %i +---+ %i extrems: <%f %f> %f <%f>\n", left, right, min, max, beamYPosition, beamOffset);
+        // debugf("beam %i +---+ %i extrems: <%f %f> %f <%f>\n", left, right, min, max, beamYPosition, beamOffset);
 
         for(Division d = left; d <= right; d++){
             struct Notes *notes = staff[d];
@@ -209,21 +209,21 @@ void computeBeams(struct Measure *measure, StaffNumber staffIndex, struct ItemPV
     
     // loop throw eatch beam depth and add the beam lines
     for(uint8_t d = 0; d < maxBeamDepth; d++){
-        debugf("depth %i\n", d);
+        // debugf("depth %i\n", d);
         findBeams(staff, measureSize, beams, d, &beamsSize);
-        debugf("beams on depth %i: ", d);
+        // debugf("beams on depth %i: ", d);
         for(Division i = 0; i < beamsSize; i++){
             struct BeamPosition *b = &beams[i];
-            printf("[%i:%i] ", b->left, b->right);
+            // printf("[%i:%i] ", b->left, b->right);
         }
-        printf("\n");
+        // printf("\n");
 
         for(Division b = 0; b < beamsSize; b++){
             struct BeamPosition *bP = &beams[b];
             Division left = bP->left;
             struct BeamInfo *bI = &beamsInfo[left];
 
-            debugf("adding beam on d %i y pos %f <%f>\n", left, bI->yPos, bI->offset * d);
+            // debugf("adding beam on d %i y pos %f <%f>\n", left, bI->yPos, bI->offset * d);
             addBeam(staff, staffIndex, itemVector, bP, bI->yPos + d * bI->offset);
         }
     }

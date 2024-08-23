@@ -10,6 +10,8 @@
 #define UNUSED(x) (void)(x)
 #define UNUSEDS(...) (void)(__VA_ARGS__)
 
+#define MIN(a, b) ((a < b) ? a : b)
+#define MAX(a, b) ((a < b) ? b : a)
 #define ABS(a) ((a < 0) ? -a : a)
 
 void debugPrint(const char *file, int line, const char *format, ...);

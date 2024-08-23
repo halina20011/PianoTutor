@@ -35,7 +35,7 @@ void updateAttributes(struct Attributes *attributes, struct Attributes *currAttr
         // if curr attribute has
         StaffNumber size = MIN(currAttributes->stavesNumber, attributes->stavesNumber);
         currAttributes->stavesNumber = attributes->stavesNumber;
-        debugf("staffNumbers copy %i\n", size);
+        // debugf("staffNumbers copy %i\n", size);
         enum Clef *clefs = currAttributes->clefs;
         currAttributes->clefs = calloc(currAttributes->stavesNumber, sizeof(enum Clef));
         if(clefs){
@@ -50,7 +50,7 @@ void updateAttributes(struct Attributes *attributes, struct Attributes *currAttr
             if(attributes->clefs[s]){
                 currAttributes->clefs[s] = attributes->clefs[s];
             }
-            debugf("clef %i = %i\n", s, attributes->clefs[s]);
+            // debugf("clef %i = %i\n", s, attributes->clefs[s]);
         }
     }
 }

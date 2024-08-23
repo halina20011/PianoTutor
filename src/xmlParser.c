@@ -142,6 +142,16 @@ long parseProp(xmlNodePtr note, char *name){
     return strtol(prop, NULL, 10);
 }
 
+uint8_t stepArray[] = {0, 2, 4, 5, 7, 9, 11};
+
+uint8_t notePitchToPitch(struct NotePitch *pitch){
+    uint8_t step = stepArray[pitch->step];
+    uint8_t r = (pitch->octave) * 12 + step + pitch->alter;
+    // debugf("%i %i %i\n", step, pitch->stepChar, r);
+    return r;
+}
+
+
 uint16_t getMeasureNotesSize(xmlNodePtr note, struct Attributes *currAtrributes, MeasureSize *measureSize, StaffNumber *staffNumber){
     xmlNodePtr children = note->xmlChildrenNode;
     long division = 0;
@@ -252,10 +262,21 @@ struct Measure **parseMeasures(xmlNodePtr part, size_t *measureSize){
     return measures;
 }
 
+void measurePitchExtreme(struct Measure *measure, struct Note *note, StaffNumber staffIndex){
+    if(GET_BIT(note->flags, NOTE_FLAG_REST)){
+        return;
+    }
+    struct PitchExtreme *pitchExtreme = &measure->pitchExtreme[staffIndex];
+    Pitch p = notePitchToPitch(&note->pitch);
+    // printf("pitch %i\n", p);
+    pitchExtreme->min = MIN(pitchExtreme->min, p);
+    pitchExtreme->max = MAX(pitchExtreme->max, p);
+}
+
 struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notesVectorMagazine, struct Attributes *currAtrributes){
-    long measureNumber = parseProp(measure, "number");
+    uint16_t measureNumber = (uint16_t)parseProp(measure, "number");
     // debugf("measure number: %li\n", measureNumber);
-    struct Measure *m = malloc(sizeof(struct Measure));
+    struct Measure *m = calloc(1, sizeof(struct Measure));
     m->attributes = NULL;
     m->staffs = NULL;
     m->sheetMeasureIndex = measureNumber;
@@ -290,6 +311,13 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
 
     struct Attributes **attributes = NULL;
     Staff *staffs = malloc(sizeof(Staff*) * staffNumber);
+    m->pitchExtreme = calloc(staffNumber, sizeof(struct PitchExtreme));
+    // printf("%i %i\n", PITCH_MIN, PITCH_MAX);
+    for(StaffNumber s = 0; s < staffNumber; s++){
+        struct PitchExtreme *pitchExtreme = &m->pitchExtreme[s];
+        pitchExtreme->min = PITCH_MAX;
+        pitchExtreme->max = PITCH_MIN;
+    }
 
     for(StaffNumber i = 0; i < staffNumber; i++){
         size_t s = sizeof(Staff) * measureSize;
@@ -312,6 +340,7 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
             bool isChord = false;
             
             struct Note *note = parseNote(children, &staveIndex, &isChord);
+            measurePitchExtreme(m, note, staveIndex);
             
             if(isChord){
                 if(currTime < note->duration){
@@ -355,6 +384,12 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
 
     // debugf("staff %p %i\n", staffs[staveIndex], staveIndex);
     flushNotes(staffs[staveIndex], notesVectorMagazine, measureSize);
+
+    // print measure pitch extremes
+    // for(StaffNumber s = 0; s < staffNumber; s++){
+    //     struct PitchExtreme *pitchExtreme = &m->pitchExtreme[s];
+    //     debugf("%i => [%i:%i]\n", s, pitchExtreme->min, pitchExtreme->max);
+    // }
 
     // for(size_t i = 0; i < measureSize; i++){
     //     struct Staff *notes = malloc(sizeof(struct Staff));

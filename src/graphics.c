@@ -12,9 +12,6 @@ extern GLint colorUniform;
 
 #define UNPACK3(val) val[0], val[1], val[2]
 
-#define MIN(a, b) ((a < b) ? a : b)
-#define MAX(a, b) ((a < b) ? b : a)
-
 void GLAPIENTRY messageCallback(IGNORE GLenum source, IGNORE GLenum type, IGNORE GLuint id, GLenum severity, IGNORE GLsizei length, const GLchar* message, IGNORE const void* userParam){
     // UNUSEDS(source, id, length, userParam);
     const char *messageString = (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" );
@@ -33,13 +30,13 @@ void processPollEvents(){
     bool right = glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
 
     if(prevMeasureMovement + 0.2f < currTime){
-        size_t currMeasure = interface->piano->currMeasure;
+        size_t currMeasure = interface->piano->sheet->currMeasure;
         if(left){
             if(currMeasure == 0){
                 currMeasure = interface->piano->measureSize - 1;
             }
             else{
-                interface->piano->currMeasure--;
+                interface->piano->sheet->currMeasure--;
             }
             prevMeasureMovement = glfwGetTime();
         }
@@ -49,7 +46,7 @@ void processPollEvents(){
                 currMeasure = 0;
             }
             else{
-                interface->piano->currMeasure++;
+                interface->piano->sheet->currMeasure++;
             }
             prevMeasureMovement = glfwGetTime();
         }

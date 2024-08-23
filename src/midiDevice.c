@@ -3,6 +3,8 @@
 
 #define MIDI_MATCH_PATH "/dev/snd/midi*"
 
+VECTOR_TYPE_FUNCTIONS(struct PressedNote, PressedNoteVector, "");
+
 int midiDeviceInit(char *path){
     char *midiDevicePath = NULL;
     if(strcmp(path, "auto") == 0){
@@ -23,7 +25,7 @@ int midiDeviceInit(char *path){
 
     if(midiDevicePath == NULL){
         fprintf(stderr, "no midi device\n");
-        exit(1);
+        return -1;
     }
     
     int f = open(midiDevicePath, O_RDWR | O_NONBLOCK);
@@ -59,12 +61,30 @@ void sendNoteEvent(int midiDevice, uint8_t eventType, struct NotePitch *notePitc
     if(midiDevice == -1){
         return;
     }
-    uint8_t pitch = fromPitch(notePitch);
+    uint8_t pitch = notePitchToPitch(notePitch);
     // debugf("[%i:%i] => %i\n", notePitch->step, notePitch->octave, pitch);
     // debugf("MIDI message: %02X %02X %02X\n", eventType, pitch, velocity);
     // debugf("MIDI message: %03i %03i %03i\n", eventType, pitch, velocity);
     uint8_t message[] = {eventType, pitch, velocity};
     write(midiDevice, message, sizeof(message));
+}
+
+void addNote(struct Piano *piano, uint8_t note){
+    uint8_t index = (uint8_t)piano->pressedNotesVector->size;
+    struct PressedNote p = {note, index};
+    PressedNoteVectorPush(piano->pressedNotesVector, p);
+    piano->pressedNotes[note] = index;
+}
+
+void removeNote(struct Piano *piano, uint8_t note){
+    uint8_t notePos = piano->pressedNotes[note];
+    piano->pressedNotes[note] = UINT8_MAX;
+    if(1 < piano->pressedNotesVector->size){
+        struct PressedNote last = piano->pressedNotesVector->data[piano->pressedNotesVector->size - 1];
+        piano->pressedNotes[last.index] = notePos;
+        piano->pressedNotesVector->data[notePos] = last;
+    }
+    piano->pressedNotesVector->size--;
 }
 
 void midiRead(struct Piano *piano){
@@ -98,10 +118,12 @@ void midiRead(struct Piano *piano){
                     debugf("MIDI Event: Status=%i, Data1=%i, Data2=%i\n", statusByte, dataBytes[0], dataBytes[1]);
                     uint8_t note = dataBytes[1];
                     if(statusByte == NOTE_ON){
-                        piano->playedNotes[note] = true;
+                        addNote(piano, note);
+                        // piano->playedNotes[note] = true;
                     }
                     else if(statusByte == NOTE_OFF){
-                        piano->playedNotes[note] = true;
+                        removeNote(piano, note);
+                        // piano->playedNotes[note] = UINT8_MAX;
                     }
                     return;
                 }

@@ -140,7 +140,7 @@ def getObjects():
     
     models["notes"] = {};
     for i in range(12):
-        noteName = f"note{i}"
+        noteName = f"note{chr(ord('A') + i)}";
         models["notes"][noteName] = noteName;
 
     for itemType in models:
