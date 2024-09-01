@@ -15,6 +15,7 @@
 #include "compute.h"
 
 #include "midiDevice.h"
+#include "view.h"
 
 #define KEYBOARD_KEY_SIZE 128
 typedef uint8_t MeshStrIdSize;
@@ -36,16 +37,21 @@ enum KeyboardMode{
 
 // pianoFunc.c
 enum Meshes assignMeshId(char *name);
+void meshBoundingBoxClear(struct MeshBoundingBox *bb);
 void meshBoundingBox(struct MeshBoundingBox *bb, float *data, uint32_t size);
-void meshBoundingBoxPrint(enum Meshes id);
+void meshBoundingBoxUpdate(struct MeshBoundingBox *bbToUpdate, struct MeshBoundingBox *itemUpdatingBb, vec3 offset);
+void meshBoundingBoxPrint(struct MeshBoundingBox *bb);
+void meshBoundingBoxDraw(struct MeshBoundingBox *bb, struct Color color);
+
 void loadPianoMeshes(struct Piano *piano);
 
 uint8_t getKeyType(uint8_t note);
 enum Meshes pitchToNote(Pitch p);
+enum PianoNotes mesheNoteToNote(enum Meshes note);
 void computeKeyboard(struct Piano *piano, Pitch start, Pitch end);
 
 
-struct Piano *pianoInit(struct Measure **measures, size_t measureSize);
+struct Piano *pianoInit(struct Measure **measures, size_t measureSize, bool hideKeyboard, bool hideNotes);
 void computeMeasures(struct Piano *piano);
 
 void pressNote(struct Piano *piano, struct Note *note, Division divisionCounter);

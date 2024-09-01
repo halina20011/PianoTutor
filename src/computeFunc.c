@@ -14,7 +14,7 @@ struct Item *itemInit(enum ItemType type, enum Meshes meshId, StaffNumber staffI
 struct Item *itemMeshInit(enum Meshes meshId, StaffNumber staffIndex, float xPosition, float yPosition){
     struct Item *item = malloc(sizeof(struct Item));
     struct ItemMesh *itemMesh = malloc(sizeof(struct ItemMesh));
-    itemMesh->xPosition = xPosition;
+    itemMesh->xPosition = xPosition * SHEET_STRETCH;
     itemMesh->yPosition = yPosition;
 
     item->data = itemMesh;
@@ -28,7 +28,7 @@ struct Item *itemMeshInit(enum Meshes meshId, StaffNumber staffIndex, float xPos
 
 struct Item *itemStemInit(StaffNumber staffIndex, float xPosition, float noteOffset, float y1, float y2){
     struct ItemStem *itemStem = malloc(sizeof(struct ItemStem));
-    itemStem->xStart = xPosition;
+    itemStem->xStart = xPosition * SHEET_STRETCH;
     itemStem->noteOffset = noteOffset;
     itemStem->y1 = y1;
     itemStem->y2 = y2;
@@ -38,13 +38,13 @@ struct Item *itemStemInit(StaffNumber staffIndex, float xPosition, float noteOff
 struct Item *itemBeamInit(StaffNumber staffIndex, float x1, float w1, float x2, float w2, float yPosition){
     struct ItemBeam *itemBeam = malloc(sizeof(struct ItemBeam));
     
-    itemBeam->xStart = x1;
+    itemBeam->xStart = x1 * SHEET_STRETCH;
     itemBeam->yStart = yPosition;
 
     itemBeam->w1 = w1;
     itemBeam->w2 = w2;
 
-    itemBeam->xEnd = x2;
+    itemBeam->xEnd = x2 * SHEET_STRETCH;
     itemBeam->yEnd = yPosition;
     
     return itemInit(ITEM_BEAM, MESH_NULL, staffIndex, itemBeam);
@@ -52,7 +52,7 @@ struct Item *itemBeamInit(StaffNumber staffIndex, float x1, float w1, float x2, 
 
 struct Item *itemLineInit(StaffNumber staffIndex, float xCenter, float y, float width){
     struct ItemLine *line = malloc(sizeof(struct ItemLine));
-    line->x = xCenter - width / 2.0f;
+    line->x = (xCenter - width / 2.0f) * SHEET_STRETCH;
     line->y = y;
     line->width = width;
 
@@ -61,7 +61,7 @@ struct Item *itemLineInit(StaffNumber staffIndex, float xCenter, float y, float 
 
 struct Item *itemFlagInit(enum Meshes id, StaffNumber staffIndex, float x, float y, float width, bool inverted){
     struct ItemFlag *flag = malloc(sizeof(struct ItemFlag));
-    flag->xPosition = x;
+    flag->xPosition = x * SHEET_STRETCH;
     flag->yPosition = y;
     flag->width = width;
     flag->inverted = inverted;

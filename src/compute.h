@@ -6,7 +6,8 @@
 
 #include "helpers.h"
 
-#include "pianoTypes.h"
+#include "pianoComputeItems.h"
+// #include "pianoTypes.h"
 #include "xmlParser.h"
 #include "helpers.h"
 
@@ -23,6 +24,8 @@
 #define BEAM_HEIGHT 0.75f
 #define BEAM_DISTANCE 0.5f
 #define BEAM_OFFSET (BEAM_HEIGHT + BEAM_DISTANCE)
+
+#define SHEET_STRETCH 1.1f
 
 struct BeamInfo{
     float yPos, offset;

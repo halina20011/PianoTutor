@@ -337,6 +337,7 @@ float computeMeasure(struct Piano *piano, size_t measureIndex, struct ItemPVecto
     float notesPositions[measureSize];
     memset(notesPositions, 0, measureSize * sizeof(float));
 
+    size_t itemVectorStart = itemVector->size;
     computeNumber(itemVector, measure->sheetMeasureIndex, 0, 8, 0.5);
 
     // for every item in measure
@@ -404,10 +405,30 @@ float computeMeasure(struct Piano *piano, size_t measureIndex, struct ItemPVecto
         offset += accidentalMaxWidth + noteMaxWidht + flagMaxWidth;
     }
 
+
     // add beams for every staff
     for(StaffNumber s = 0; s < staffNumber; s++){
         computeBeams(measure, s, itemVector);
     }
+    
+    measure->boundingBoxes = malloc(sizeof(struct MeshBoundingBox) * measure->stavesNumber);
+    for(StaffNumber s = 0; s < measure->stavesNumber; s++){
+        struct MeshBoundingBox *boundingBox = &measure->boundingBoxes[s];
+        meshBoundingBoxClear(boundingBox);
+    }
+
+    for(size_t itemIndex = itemVectorStart; itemIndex < itemVector->size; itemIndex++){
+        struct Item *item = itemVector->data[itemIndex];
+        if(item->type != ITEM_MESH){
+            continue;
+        }
+        // debugf("staffIndex: %i\n", item->staffIndex);
+        // meshBoundingBoxUpdate(boundingBox, &item->boundingBox);
+        struct ItemMesh *itemMesh = ((struct ItemMesh*)item->data);
+        meshBoundingBoxUpdate(&measure->boundingBoxes[item->staffIndex], &meshBoundingBoxes[item->meshId], (vec3){itemMesh->xPosition, itemMesh->yPosition, 0});
+    }
+
+    // meshBoundingBoxPrint(boundingBox);
 
     return offset;
 }
@@ -486,6 +507,24 @@ void computeMeasures(struct Piano *piano){
     }
 
     ItemMeasurePVectorFree(itemMeasureV);
+    
+    struct MeshBoundingBox *sheetBoundingBox = &piano->boundingBox;
+    meshBoundingBoxClear(sheetBoundingBox);
+    // update every staff's boundingBox in measure
+    for(MeasureSize m = 0; m < piano->measureSize; m++){
+        struct Measure *measure = piano->measures[m];
+        meshBoundingBoxClear(&measure->boundingBox);
+        for(StaffNumber s = 0; s < staffNumber; s++){
+            meshBoundingBoxUpdate(&measure->boundingBox, &measure->boundingBoxes[s], (vec3){0, -staffOffsets[s], 0});
+            // staffOffsets[s]
+        }
+
+        meshBoundingBoxUpdate(sheetBoundingBox, &measure->boundingBox, (vec3){});
+    }
+    
+    float height = sheetBoundingBox->max[1] - sheetBoundingBox->min[1];
+    debugf("sheet height: %f\n", height);
+    sheet->height = height;
 
     piano->sheet = sheet;
 }

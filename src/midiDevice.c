@@ -13,7 +13,7 @@ int midiDeviceInit(char *path){
         int globStatus = glob(MIDI_MATCH_PATH, 0, NULL, &globResult);
         if(globStatus){
             fprintf(stderr, "no file that matches %s\n", MIDI_MATCH_PATH);
-            exit(1);
+            return -1;
         }
 
         char *firstMatch = globResult.gl_pathv[0];

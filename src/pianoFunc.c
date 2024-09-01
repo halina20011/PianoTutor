@@ -1,5 +1,8 @@
 #include "piano.h"
 
+#include "interface.h"
+extern struct Interface *interface;
+
 extern GLint globalMatUniform;
 extern GLint localMatUniform;
 extern GLint colorUniform;
@@ -99,7 +102,7 @@ enum Meshes assignMeshId(char *name){
     exit(1);
 }
 
-void meshBoundingBox(struct MeshBoundingBox *bb, float *data, uint32_t size){
+void meshBoundingBoxClear(struct MeshBoundingBox *bb){
     bb->min[0] = FLT_MAX;
     bb->min[1] = FLT_MAX;
     bb->min[2] = FLT_MAX;
@@ -107,6 +110,10 @@ void meshBoundingBox(struct MeshBoundingBox *bb, float *data, uint32_t size){
     bb->max[0] = FLT_MIN;
     bb->max[1] = FLT_MIN;
     bb->max[2] = FLT_MIN;
+}
+
+void meshBoundingBox(struct MeshBoundingBox *bb, float *data, uint32_t size){
+    meshBoundingBoxClear(bb);
 
     for(uint32_t i = 0; i < size; i += 3){
         bb->min[0] = MIN(data[i + 0], bb->min[0]);
@@ -119,10 +126,28 @@ void meshBoundingBox(struct MeshBoundingBox *bb, float *data, uint32_t size){
     }
 }
 
-void meshBoundingBoxPrint(enum Meshes id){
-    struct MeshBoundingBox *bb = &meshBoundingBoxes[id];
+void meshBoundingBoxUpdate(struct MeshBoundingBox *bbToUpdate, struct MeshBoundingBox *itemUpdatingBb, vec3 offset){
+    bbToUpdate->min[0] = MIN(bbToUpdate->min[0], itemUpdatingBb->min[0] + offset[0]);
+    bbToUpdate->min[1] = MIN(bbToUpdate->min[1], itemUpdatingBb->min[1] + offset[1]);
+    bbToUpdate->min[2] = MIN(bbToUpdate->min[2], itemUpdatingBb->min[2] + offset[2]);
+                                                                       
+    bbToUpdate->max[0] = MAX(bbToUpdate->max[0], itemUpdatingBb->max[0] + offset[0]);
+    bbToUpdate->max[1] = MAX(bbToUpdate->max[1], itemUpdatingBb->max[1] + offset[1]);
+    bbToUpdate->max[2] = MAX(bbToUpdate->max[2], itemUpdatingBb->max[2] + offset[2]);
+}
 
-    SET_COLOR(colorUniform, GREEN);
+void meshBoundingBoxPrint(struct MeshBoundingBox *bb){
+    debugf("bounding box: [%f %f %f] [%f %f %f]\n", bb->min[0], bb->min[1], bb->min[2], bb->max[0], bb->max[1], bb->max[2]);
+}
+
+// void meshBoundingBoxDraw(enum Meshes id){
+void meshBoundingBoxDraw(struct MeshBoundingBox *bb, struct Color color){
+    if(!interface->showBoudningBox){
+        return;
+    }
+
+    SET_COLOR(colorUniform, color);
+
     // A ---- B
     // |      |
     // |      |
@@ -258,15 +283,23 @@ enum Meshes pitchToNote(Pitch p){
     return noteToMesh[p % 12];
 }
 
+enum PianoNotes meshesNote[] = {
+    C_NOTE, D_NOTE, E_NOTE, F_NOTE, G_NOTE, A_NOTE, H_NOTE,
+    C_SHARP_NOTE, D_SHARP_NOTE, F_SHARP_NOTE, G_SHARP_NOTE, A_SHARP_NOTE
+};
+
+enum PianoNotes mesheNoteToNote(enum Meshes note){
+    return meshesNote[note - C];
+}
+
 // TODO: keyboard to start and stop from any key
 void computeKeyboard(struct Piano *piano, Pitch start, Pitch end){
     size_t whiteTrigCount = 0, blackTrigCount = 0;
     size_t linesTrigCount = 0;
 
-    enum Meshes firstNote = pitchToNote(start);
-    enum Meshes lastNote = pitchToNote(end);
-    start -= firstNote - C - 1;
-    end += H - lastNote;
+    // TODO: keyboard, max height
+    start -= (start % 12) - C_NOTE;
+    // end += H - (;
 
     // uint8_t start = notePitchToPitch(s);
     // uint8_t end = notePitchToPitch(e);
@@ -376,4 +409,12 @@ void computeKeyboard(struct Piano *piano, Pitch start, Pitch end){
     free(whiteKeys);
     free(blackKeys);
     free(lines);
+    
+    float scale = 2.0f / piano->keyboard.keyboardWidth;
+    float keyboardHeight = MBB_MAX(C)[1] * scale * interface->g->screenRatio;
+    float notesHeight = 2.0f - (piano->view.items[VIEW_ITEM_TYPE_SHEET].height + keyboardHeight);
+    viewSet(&piano->view, VIEW_ITEM_TYPE_KEYBOARD, keyboardHeight);
+    viewSet(&piano->view, VIEW_ITEM_TYPE_NOTES, notesHeight);
+    debugf("keyboardHeight: %f notesHeight %f\n", keyboardHeight, notesHeight);
+    viewRecalc(&piano->view);
 }

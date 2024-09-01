@@ -12,11 +12,17 @@ flags = -f ~/Documents/Notes/Megalovania.mxl
 # flags = -f ~/Documents/Notes/Shreksophone__Shrek_and_Donkey.mxl
 # flags = -f ~/Documents/MuseScore4/Scores/test.mxl
 
+flags += --hide-keyboard --hide-notes
+
 run: make
 	./build/main ${flags}
 
 make:
 	cd build && make
+
+shaders: makeShaders.c
+	gcc makeShaders.c -o ./build/makeShaders && ./build/makeShaders | tee src/shaders.h
+	touch ./src/graphics.c
 
 debug: make
 	gdb -ex "set debuginfod enabled off" -ex "set args $(flags)" -ex run ./build/main

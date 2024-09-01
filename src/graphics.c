@@ -8,6 +8,7 @@ extern GLuint elementArrayBuffer;
 
 extern GLint globalMatUniform;
 extern GLint localMatUniform;
+extern GLint viewMatUniform;
 extern GLint colorUniform;
 
 #define UNPACK3(val) val[0], val[1], val[2]
@@ -248,6 +249,7 @@ struct Graphics *graphicsInit(){
 
     globalMatUniform = getUniformLocation(interface->shader, "globalMatrix");
     localMatUniform = getUniformLocation(interface->shader, "modelMatrix");
+    viewMatUniform = getUniformLocation(interface->shader, "viewMatrix");
     colorUniform = getUniformLocation(interface->shader, "color");
     SET_COLOR(colorUniform, WHITE);
 

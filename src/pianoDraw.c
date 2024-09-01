@@ -7,6 +7,7 @@ extern GLuint elementArrayBuffer;
 
 extern GLint globalMatUniform;
 extern GLint localMatUniform;
+extern GLint viewMatUniform;
 extern GLint colorUniform;
 
 extern struct MeshBoundingBox *meshBoundingBoxes;
@@ -14,6 +15,16 @@ extern struct MeshBoundingBox *meshBoundingBoxes;
 void draw(struct Piano *piano, double percentage, enum KeyboardMode keyboardMode){
     glClear(GL_COLOR_BUFFER_BIT);
     
+    viewReset();
+    
+    mat4 globMatrix = {};
+    vec3 globScale = {interface->scale, interface->scale, interface->scale};
+    vec3 globPos = {interface->xPos, interface->yPos, 0};
+    glm_mat4_identity(globMatrix);
+    glm_scale(globMatrix, globScale);
+    glm_translate(globMatrix, globPos);
+    glUniformMatrix4fv(globalMatUniform, 1, GL_FALSE, (float*)globMatrix);
+
     drawNotes(piano, percentage);
     drawKeyboard(piano, keyboardMode);
 
@@ -25,30 +36,24 @@ void draw(struct Piano *piano, double percentage, enum KeyboardMode keyboardMode
 }
 
 void drawSheet(struct Piano *piano){
-    float stretch = 1.1f;
     float clearance = 0.7f;
 
     float offset = 0 + clearance;
     struct Sheet *sheet = piano->sheet;
 
-    float scale = 0.008f;
+    // float scale = 0.05f;
+    float scale = 1.0f / sheet->height;
     // glEnable(GL_SCISSOR_TEST);
     // // if(interface->g->xPos < interface->g->width
     // glScissor(interface->xPos, -interface->yPos + interface->g->height - 100, interface->g->width, 120);
     // glClear(GL_COLOR_BUFFER_BIT);
     // glDisable(GL_SCISSOR_TEST);
 
-    mat4 globMatrix = {};
-    vec3 globScale = {interface->scale, interface->scale, interface->scale};
-    vec3 globPos = {interface->xPos, interface->yPos, 0};
-    glm_mat4_identity(globMatrix);
-    glm_scale(globMatrix, globScale);
-    glm_translate(globMatrix, globPos);
-    glUniformMatrix4fv(globalMatUniform, 1, GL_FALSE, (float*)globMatrix);
-
     mat4 clearMat = {};
     glm_mat4_identity(clearMat);
     glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)clearMat);
+
+    viewUse(&piano->view, VIEW_ITEM_TYPE_SHEET);
 
     // float lastLine = sheet->staffOffsets[sheet->staffNumber - 1] + (piano->sheet->staffNumber-1) * 8.f;
     //
@@ -59,25 +64,54 @@ void drawSheet(struct Piano *piano){
     // drawRectangle(-1, start, 1, start - height);
 
     // size_t s = 0;
-    vec3 cursor = {-0.8f, 0.8f, 0};
+    // vec3 cursor = {-0.8f, 0.8f, 0};
+    // float yOffset = piano->view.items[VIEW_ITEM_TYPE_SHEET].height / 2.f;
+    float yOffset = sheet->height / 2.0f;
+    vec3 cursor = {-0.8f, yOffset * scale, 0};
     float lastStaffOffset = piano->sheet->staffOffsets[piano->sheet->staffNumber - 1];
     float barHeight = lastStaffOffset + (piano->sheet->staffNumber - 1) * 4.f;
 
     vec3 scaleVec = {scale, scale * interface->g->screenRatio, scale};
     mat4 cleanMat = {};
     glm_mat4_identity(cleanMat);
+    
+    // float __stretch = 2.0f;
+    // glm_scale(cleanMat, (vec3){__stretch, 1, 1}); // scale to the needed stretch
     glm_translate(cleanMat, cursor);
+    // glm_scale(cleanMat, (vec3){1.0f / __stretch, 1, 1}); // scale back to not affect width
+    // glm_scale(cleanMat, (vec3){__stretch, 1, 1}); // scale to the needed stretch
+
     glm_scale(cleanMat, scaleVec);
     glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)cleanMat);
-    SET_COLOR(colorUniform, WHITE);
-    
+
     // for(size_t m = 0; m < 0; m++){
     // TODO: exit the loop base on offset
     for(size_t m = piano->sheet->currMeasure; m < sheet->measuresSize && m < piano->sheet->currMeasure + 5; m++){
-        struct ItemMeasure *measure = sheet->measures[m];
-        size_t itemsSize = measure->size;
+        struct Measure *measure = piano->measures[m];
+        struct ItemMeasure *itemMeasure = sheet->measures[m];
+        size_t itemsSize = itemMeasure->size;
+        
+        // mat4 measureMat = {};
+        // glm_mat4_copy(cleanMat, measureMat);
+        // glm_translate(measureMat, (vec3){offset, 0, 0});
+        // glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)measureMat);
+        // meshBoundingBoxDraw(&measure->boundingBox, PURPLE);
+        
+        SET_COLOR(colorUniform, GREEN);
+        for(StaffNumber s = 0; s < measure->stavesNumber; s++){
+            mat4 mMat = {};
+            glm_mat4_copy(cleanMat, mMat);
+            float staffOffset = sheet->staffOffsets[s];
+            vec3 pos = {offset, -staffOffset, 0};
+            glm_translate(mMat, pos);
+            glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)mMat);
+            
+            // meshBoundingBoxPrint(&measure->boundingBox);
+            meshBoundingBoxDraw(&measure->boundingBoxes[s], GREEN);
+        }
+
         for(size_t i = 0; i < itemsSize; i++){
-            struct Item *item = measure->items[i];
+            struct Item *item = itemMeasure->items[i];
             float staffOffset = sheet->staffOffsets[item->staffIndex];
             // debugf("%i %f\n", item->staffIndex, staffOffset);
             enum Meshes meshId = item->meshId;
@@ -99,17 +133,19 @@ void drawSheet(struct Piano *piano){
                         }
                     }
                 }
+                
+                struct ItemMesh *iM = item->data;
 
                 size_t trigCount = piano->meshesDataSize[meshId] / 3;
                 GLint index = piano->meshesDataStart[meshId] / 3 + piano->meshesDataStartOffset;
+                
                 mat4 mMat = {};
-                glm_mat4_identity(mMat);
-                struct ItemMesh *iM = item->data;
-                glm_translate(mMat, cursor);
-                glm_scale(mMat, scaleVec);
-                // vec3 pos = {(offset + iM->xPosition) * 1.5, 50, 0};
-                float width = MBB_MAX(meshId)[0] / 2.0f;
-                vec3 pos = {(offset + iM->xPosition) * stretch, iM->yPosition - staffOffset, 0};
+                glm_mat4_copy(cleanMat, mMat);
+                // glm_mat4_identity(mMat);
+                // glm_translate(mMat, cursor);
+                // glm_scale(mMat, scaleVec);
+                vec3 pos = {offset + iM->xPosition, iM->yPosition - staffOffset, 0};
+                // vec3 pos = {(offset + iM->xPosition) * SHEET_STRETCH, iM->yPosition - staffOffset, 0};
                 glm_translate(mMat, pos);
 
                 glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)mMat);
@@ -121,12 +157,7 @@ void drawSheet(struct Piano *piano){
                     SET_COLOR(colorUniform, WHITE);
                 }
 
-                // if(interface->showBoudningBox){
-                //     //useShader(interface->shader);
-                //     glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)mMat);
-                //     meshBoundingBoxPrint(item->meshId);
-                //     glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)cleanMat);
-                // }
+                meshBoundingBoxDraw(&meshBoundingBoxes[item->meshId], GREEN);
             }
             else if(item->type == ITEM_BAR){
 
@@ -136,7 +167,7 @@ void drawSheet(struct Piano *piano){
                 // staffOffset
                 struct ItemStem *itemStem = item->data;
                 // itemStem->
-                float x = (itemStem->xStart + offset) * stretch + itemStem->noteOffset;
+                float x = (itemStem->xStart + offset) + itemStem->noteOffset;
 
                 float y1 = itemStem->y1 - staffOffset;
                 float y2 = itemStem->y2 - staffOffset;
@@ -148,8 +179,8 @@ void drawSheet(struct Piano *piano){
                 //useShader(interface->shader);
 
                 struct ItemBeam *beam = item->data;
-                float x1 = (beam->xStart + offset) * stretch;
-                float x2 = (beam->xEnd   + offset) * stretch;
+                float x1 = (beam->xStart + offset);
+                float x2 = (beam->xEnd   + offset);
                 float w1 = beam->w1;
                 float w2 = beam->w2;
                 float y = beam->yStart - staffOffset;
@@ -165,14 +196,17 @@ void drawSheet(struct Piano *piano){
                 //useShader(interface->shader);
 
                 mat4 mMat = {};
-                glm_mat4_identity(mMat);
-                glm_translate(mMat, cursor);
-                glm_scale(mMat, scaleVec);
+                // glm_mat4_identity(mMat);
+                // glm_translate(mMat, cursor);
+                // glm_scale(mMat, scaleVec);
+                glm_mat4_copy(cleanMat, mMat);
                 glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)mMat);
 
                 struct ItemLine *line = item->data;
-                float x1 = (line->x + offset) * stretch;
-                float x2 = ((line->x + line->width) + offset) * stretch;
+                // float x1 = (line->x + offset) * SHEET_STRETCH;
+                // float x2 = ((line->x + line->width) + offset) * SHEET_STRETCH;
+                float x1 = (line->x + offset);
+                float x2 = ((line->x + line->width) + offset);
                 float y = line->y - staffOffset;
 
                 glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)cleanMat);
@@ -185,13 +219,16 @@ void drawSheet(struct Piano *piano){
                 size_t trigCount = piano->meshesDataSize[meshId] / 3;
                 GLint index = piano->meshesDataStart[meshId] / 3;
                 
-                mat4 mMat = {};
-                glm_mat4_identity(mMat);
                 struct ItemFlag *flag = item->data;
-                glm_translate(mMat, cursor);
-                glm_scale(mMat, scaleVec);
+
+                mat4 mMat = {};
+                glm_mat4_copy(cleanMat, mMat);
+                // glm_mat4_identity(mMat);
+                // glm_translate(mMat, cursor);
+                // glm_scale(mMat, scaleVec);
                 // vec3 pos = {(offset + iM->xPosition) * 1.5, 50, 0};
-                vec3 pos = {(offset + flag->xPosition) * stretch + flag->width, flag->yPosition - staffOffset, 0};
+                // vec3 pos = {(offset + flag->xPosition) * SHEET_STRETCH + flag->width, flag->yPosition - staffOffset, 0};
+                vec3 pos = {(offset + flag->xPosition) + flag->width, flag->yPosition - staffOffset, 0};
                 glm_translate(mMat, pos);
                 if(flag->inverted){
                     glm_scale(mMat, (vec3){1, -1, 1});
@@ -206,50 +243,60 @@ void drawSheet(struct Piano *piano){
             }
         }
 
-        offset += measure->width;
-        // //useShader(interface->shader);
-        // // mat4 mMat = {};
-        // // glm_mat4_identity(mMat);
-        // // glm_translate(mMat, cursor);
-        // // glm_scale(mMat, scaleVec);
-        // // glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)mMat);
-        // float x = (float)(offset + m) * stretch;
-        float x = offset * stretch;
+        offset += itemMeasure->width * SHEET_STRETCH;
+        float x = offset;
         drawLine(x, 4.f, 0, x, - barHeight, 1);
         offset += clearance;
-        //
-        // SET_COLOR(colorUniform, WHITE);
     }
 
-    // draw staffs
+    // draw staffs lines
     for(StaffNumber s = 0; s < sheet->staffNumber; s++){
         float staffOffset = sheet->staffOffsets[s];
         for(int8_t yOffset = -2; yOffset <= 2; yOffset++){
             float y = yOffset * 2.0f + staffOffset;
-            drawLine(0, -y, 0, offset * stretch, -y, 0);
+            drawLine(0, -y, 0, offset, -y, 0);
         }
     }
 }
 
-
 void drawNotes(struct Piano *piano, double percentage){
-    SET_COLOR(colorUniform, RED);
-    mat4 globMatrix = {};
-    vec3 globScale = {interface->scale, interface->scale, interface->scale};
-    vec3 globPos = {interface->xPos, interface->yPos, 0};
-    glm_mat4_identity(globMatrix);
-    glm_scale(globMatrix, globScale);
-    glm_translate(globMatrix, globPos);
-    glUniformMatrix4fv(globalMatUniform, 1, GL_FALSE, (float*)globMatrix);
-
-    float scale = 2.f / piano->keyboard.keyboardWidth;
     mat4 mat = {};
     glm_mat4_identity(mat);
-    vec3 scaleVec = {scale, scale * interface->g->screenRatio, scale};
+    glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)mat);
+
+    viewUse(&piano->view, VIEW_ITEM_TYPE_NOTES);
+
+    float scale = 2.0f / piano->keyboard.keyboardWidth;
+
+    size_t linesStartIndex = interface->piano->keyboard.linesDataStartOffset;
+
+    float scaleY = 2.0f / MBB_MAX(LINES)[1];
+    float scaleX = 1.0f / (piano->view.items[VIEW_ITEM_TYPE_NOTES].height / 2.0f);
+    vec3 scaleLineVec = {scaleX * scale, scaleY, scale};
     glm_translate(mat, (vec3){-1, -1, 0});
-    glm_translate_y(mat, MBB_MAX(C)[1] * scale * interface->g->screenRatio);
-    glm_scale(mat, (vec3){1, 50, 1});
-    glm_scale(mat, scaleVec);
+    glm_scale(mat, scaleLineVec);
+
+    glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)mat);
+
+    SET_COLOR(colorUniform, WHITE);
+    glDrawArrays(GL_TRIANGLES, linesStartIndex, piano->keyboard.linesDataStartOffset);
+
+    // mat4 clearMat = {};
+    // glm_mat4_identity(clearMat);
+    // glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)clearMat);
+    //
+    // viewUse(&piano->view, VIEW_ITEM_TYPE_NOTES);
+    //
+    // SET_COLOR(colorUniform, RED);
+    //
+    // float scale = 2.f / piano->keyboard.keyboardWidth;
+    // mat4 mat = {};
+    // glm_mat4_identity(mat);
+    // vec3 scaleVec = {scale, scale * interface->g->screenRatio, scale};
+    // glm_translate(mat, (vec3){-1, -1, 0});
+    // glm_translate_y(mat, MBB_MAX(C)[1] * scale * interface->g->screenRatio);
+    // glm_scale(mat, (vec3){1, 50, 1});
+    // glm_scale(mat, scaleVec);
 
     // piano->playedNotesVector
     float offset = 0;
@@ -299,37 +346,34 @@ void drawNotes(struct Piano *piano, double percentage){
 }
 
 void drawKeyboard(struct Piano *piano, enum KeyboardMode keyboardMode){
-    mat4 mat = {};
-    glm_mat4_identity(mat);
+    // mat4 mat = {};
+    // glm_mat4_identity(mat);
 
-    size_t linesStartIndex = interface->piano->keyboard.linesDataStartOffset;
     size_t whiteStartIndex = interface->piano->keyboard.whiteKeysDataStartOffset;
     size_t blackStartIndex = interface->piano->keyboard.blackKeysDataStartOffset;
 
-    float scale = 2.0f / piano->keyboard.keyboardWidth;
-
-    float lastLine = piano->sheet->staffOffsets[piano->sheet->staffNumber - 1] + (piano->sheet->staffNumber-1) * 8.f;
-
-    float sscale = 0.008f;
-    float yScale = sscale * interface->g->screenRatio;
-    float height = (lastLine * yScale) + 0.2f + MBB_MAX(C)[1] * scale * interface->g->screenRatio;
-    // drawRectangle(-1, start, 1, start - height);
-    float scaleY = (2.0f - height) / MBB_MAX(LINES)[1];
-    vec3 scaleLineVec = {scale, scaleY, scale};
-    glm_translate(mat, (vec3){-1, -1, 0});
-    glm_translate_y(mat, MBB_MAX(C)[1] * scale * interface->g->screenRatio);
-    glm_scale(mat, scaleLineVec);
-
+    mat4 mat = {};
+    glm_mat4_identity(mat);
     glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)mat);
 
-    SET_COLOR(colorUniform, WHITE);
-    glDrawArrays(GL_TRIANGLES, linesStartIndex, piano->keyboard.linesDataStartOffset);
+    viewUse(&piano->view, VIEW_ITEM_TYPE_KEYBOARD);
 
-    glm_mat4_identity(mat);
+    float scale = 2.0f / piano->keyboard.keyboardWidth;
 
-    vec3 scaleVec = {scale, scale * interface->g->screenRatio, scale};
+    size_t linesStartIndex = interface->piano->keyboard.linesDataStartOffset;
+
+    float scaleY = 2.0f / (MBB_MAX(C)[1]);
+    float scaleX = 1.0f / (piano->view.items[VIEW_ITEM_TYPE_KEYBOARD].height / 2.0f);
+    vec3 scaleLineVec = {scaleX * scale, scaleY, scale};
     glm_translate(mat, (vec3){-1, -1, 0});
-    glm_scale(mat, scaleVec);
+    glm_scale(mat, scaleLineVec);
+    //
+    // float scale = 2.0f / piano->keyboard.keyboardWidth;
+    // glm_mat4_identity(mat);
+    //
+    // vec3 scaleVec = {scale, scale * interface->g->screenRatio, scale};
+    // glm_translate(mat, (vec3){-1, -1, 0});
+    // glm_scale(mat, scaleVec);
 
     glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)mat);
 

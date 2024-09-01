@@ -14,6 +14,9 @@
 #define MAX(a, b) ((a < b) ? b : a)
 #define ABS(a) ((a < 0) ? -a : a)
 
+#define SET_BIT(variable, bit) (variable |= (1 << bit))
+#define GET_BIT(variable, bit) (variable & (1 << bit))
+
 void debugPrint(const char *file, int line, const char *format, ...);
 #define debugf(format, args...) debugPrint(__FILE__, __LINE__, format, ##args)
 // #define debugf(format, args...) printf(format, ##args)

@@ -7,18 +7,18 @@ extern GLuint elementArrayBuffer;
 
 extern GLint globalMatUniform;
 extern GLint localMatUniform;
+extern GLint viewMatUniform;
 extern GLint colorUniform;
 
 struct MeshBoundingBox *meshBoundingBoxes;
 
-VECTOR_TYPE_FUNCTIONS(size_t, SizeVector, "%zu");
 VECTOR_TYPE_FUNCTIONS(struct Item*, ItemPVector, "%p");
 VECTOR_TYPE_FUNCTIONS(struct Item**, ItemPPVector, "%p");
 VECTOR_TYPE_FUNCTIONS(struct ItemMeasure*, ItemMeasurePVector, "%p");
 
 VECTOR_TYPE_FUNCTIONS(struct PlayedNote*, PlayedNotePVector, "%p");
 
-struct Piano *pianoInit(struct Measure **measures, size_t measureSize){
+struct Piano *pianoInit(struct Measure **measures, size_t measureSize, bool hideKeyboard, bool hideNotes){
     graphicsInit();
     struct Piano *piano = calloc(1, sizeof(struct Piano));
     interface->piano = piano;
@@ -29,15 +29,28 @@ struct Piano *pianoInit(struct Measure **measures, size_t measureSize){
 
     piano->midiDevice = -1;
     piano->midiDevice = midiDeviceInit("auto");
-    if(piano->midiDevice == -1){
-        exit(1);
-    }
+    // if(piano->midiDevice == -1){
+    //     exit(1);
+    // }
 
     piano->playedNotesVector = PlayedNotePVectorInit();
     piano->pressedNotesVector = PressedNoteVectorInit();
 
     piano->keyboard.keysDataStart = malloc(sizeof(size_t) * KEYBOARD_KEY_SIZE);
+    
+    viewInit(&piano->view, 3);
 
+    // TODO: --hide-keyboard
+    // TODO: --hide-notes 
+    float sheetHeight = 0.6f;
+    // float keyboardHeigh = 
+    // if(hideKeyboard && hideNotes){
+    //
+    // }
+
+    viewSet(&piano->view, VIEW_ITEM_TYPE_SHEET, sheetHeight);
+    // viewSet for keyboard and notes is set in computeKeyboard
+    
     return piano;
 }
 
@@ -78,7 +91,7 @@ void pianoPlaySong(struct Piano *piano){
     struct Measure **measures = piano->measures;
     size_t measureIndex = 0;
     Division currDivision = -1;
-    double currBmp = 100;
+    double currBmp = 106;
     double prevTime = 0;
     struct Attributes currAttributes = {};
     double divisionTimer = 0;

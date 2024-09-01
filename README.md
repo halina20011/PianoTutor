@@ -22,6 +22,10 @@ make
 - libxml2
 - libzip
 
+```
+yay -S cglm glew libzip
+```
+
 ## Software
 - Blender
 
