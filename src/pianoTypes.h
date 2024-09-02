@@ -132,14 +132,14 @@ struct Measure{
 struct Keyboard{
     uint8_t firstOctave;
     float keyboardWidth;
-    // index where where on gpu starts the keys
-    size_t whiteKeysDataStartOffset, blackKeysDataStartOffset, linesDataStartOffset;
+    // // index where where on gpu starts the keys
+    // size_t whiteKeysDataStartOffset, blackKeysDataStartOffset, linesDataStartOffset;
     // keyboard mesh keys that are loaded at the start from global mesh
     float *keys;
     // map of notePitch => mesh start, that is used for drawing pressed notes
     size_t *keysDataStart;
-    size_t whiteKeysTrigCount, blackKeysTrigCount;
-    size_t linesTrigCount;
+    // size_t whiteKeysTrigCount, blackKeysTrigCount;
+    // size_t linesTrigCount;
     float octaveWidth;
 };
 
@@ -148,7 +148,8 @@ struct Piano{
     size_t measureSize;
     struct MeshBoundingBox boundingBox;
 
-    size_t meshesDataStartOffset;
+    // size_t meshesDataStartOffset;
+    // map for enum Mesh => vertex position and vertex size
     size_t *meshesDataStart, *meshesDataSize;
     
     struct Keyboard keyboard;

@@ -244,15 +244,11 @@ void loadPianoMeshes(struct Piano *piano){
         }
     }
 
-    // for(size_t i = 0; i < 12; i += 3){
-    //     debugf("%f %f %f\n", data[i], data[i + 1], data[i + 2]);
-    // }
     glBufferData(GL_ARRAY_BUFFER, VERTEX_BUFFER_BYTES_SIZE, NULL, GL_DYNAMIC_DRAW);
-    size_t dataSizeInBytes = sizeof(float) * dataSize;
-    // piano->meshesDataStartOffset = VERTEX_BUFFER_SIZE - dataSizeInBytes;
-    // glBufferSubData(GL_ARRAY_BUFFER, piano->meshesDataStartOffset, dataSizeInBytes, data);
-    piano->meshesDataStartOffset = VERTEX_BUFFER_COUNT - dataSize / 3;
-    glBufferSubData(GL_ARRAY_BUFFER, piano->meshesDataStartOffset * VERTEX_BYTES_SIZE, dataSizeInBytes, data);
+    // size_t dataSizeInBytes = sizeof(float) * dataSize;
+    // piano->meshesDataStartOffset = VERTEX_BUFFER_COUNT - dataSize / 3;
+    // glBufferSubData(GL_ARRAY_BUFFER, piano->meshesDataStartOffset * VERTEX_BYTES_SIZE, dataSizeInBytes, data);
+    vertexBufferSet(VERTEX_BUFFER_MESHES, data, dataSize);
     free(data);
     free(dataArray);
     // piano->data = data;
@@ -389,23 +385,28 @@ void computeKeyboard(struct Piano *piano, Pitch start, Pitch end){
 
     piano->keyboard.keyboardWidth = widht;
 
-    whiteTrigCount /= VERTEX_SIZE;
-    blackTrigCount /= VERTEX_SIZE;
-    linesTrigCount /= VERTEX_SIZE;
+    // whiteTrigCount /= VERTEX_SIZE;
+    // blackTrigCount /= VERTEX_SIZE;
+    // linesTrigCount /= VERTEX_SIZE;
 
-    piano->keyboard.whiteKeysTrigCount = whiteTrigCount;
-    piano->keyboard.blackKeysTrigCount = blackTrigCount;
+    // piano->keyboard.whiteKeysTrigCount = whiteTrigCount / 3;
+    // piano->keyboard.blackKeysTrigCount = blackTrigCount / 3;
+    // piano->keyboard.linesTrigCount = linesTrigCount / 3;
 
-    size_t whiteKeysStart = (VERTEX_BUFFER_COUNT - piano->meshesDataStartOffset) - (whiteTrigCount + blackTrigCount + linesTrigCount);
-    size_t blackKeysStart = whiteKeysStart + whiteTrigCount;
-    size_t linesStart = blackKeysStart + linesTrigCount;
-    piano->keyboard.whiteKeysDataStartOffset = whiteKeysStart;
-    piano->keyboard.blackKeysDataStartOffset = blackKeysStart;
-    piano->keyboard.linesDataStartOffset = linesStart;
+    // size_t whiteKeysStart = (VERTEX_BUFFER_COUNT - piano->meshesDataStartOffset) - (whiteTrigCount + blackTrigCount + linesTrigCount);
+    // size_t blackKeysStart = whiteKeysStart + whiteTrigCount;
+    // size_t linesStart = blackKeysStart + linesTrigCount;
+    // piano->keyboard.whiteKeysDataStartOffset = whiteKeysStart;
+    // piano->keyboard.blackKeysDataStartOffset = blackKeysStart;
+    // piano->keyboard.linesDataStartOffset = linesStart;
 
-    glBufferSubData(GL_ARRAY_BUFFER, whiteKeysStart * VERTEX_BYTES_SIZE, whiteTrigCount * VERTEX_BYTES_SIZE, whiteKeys);
-    glBufferSubData(GL_ARRAY_BUFFER, blackKeysStart * VERTEX_BYTES_SIZE, blackTrigCount * VERTEX_BYTES_SIZE, blackKeys);
-    glBufferSubData(GL_ARRAY_BUFFER, linesStart * VERTEX_BYTES_SIZE, linesTrigCount * VERTEX_BYTES_SIZE, lines);
+    // TODO: rename
+    vertexBufferSet(VERTEX_BUFFER_WHITE_KEYS, whiteKeys, whiteTrigCount);
+    vertexBufferSet(VERTEX_BUFFER_BLACK_KEYS, blackKeys, blackTrigCount);
+    vertexBufferSet(VERTEX_BUFFER_LINES, lines, linesTrigCount);
+    // glBufferSubData(GL_ARRAY_BUFFER, whiteKeysStart * VERTEX_BYTES_SIZE, whiteTrigCount * VERTEX_BYTES_SIZE, whiteKeys);
+    // glBufferSubData(GL_ARRAY_BUFFER, blackKeysStart * VERTEX_BYTES_SIZE, blackTrigCount * VERTEX_BYTES_SIZE, blackKeys);
+    // glBufferSubData(GL_ARRAY_BUFFER, linesStart * VERTEX_BYTES_SIZE, linesTrigCount * VERTEX_BYTES_SIZE, lines);
     free(whiteKeys);
     free(blackKeys);
     free(lines);

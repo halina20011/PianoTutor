@@ -9,6 +9,7 @@
 #include "helpers.h"
 
 #include "pianoTypes.h"
+
 #include "xmlParser.h"
 #include "graphics.h"
 
@@ -20,12 +21,6 @@
 #define KEYBOARD_KEY_SIZE 128
 typedef uint8_t MeshStrIdSize;
 #define MAX_MODEL_ID_SIZE 255
-
-// size the the shared buffer for gpu
-#define VERTEX_SIZE (3)
-#define VERTEX_BYTES_SIZE (VERTEX_SIZE * sizeof(float))
-#define VERTEX_BUFFER_COUNT ((4 * 1024 * 1024) / VERTEX_BYTES_SIZE)
-#define VERTEX_BUFFER_BYTES_SIZE (VERTEX_BYTES_SIZE * VERTEX_BUFFER_COUNT)
 
 #define WHITE_KEY 0
 #define BLACK_KEY 1

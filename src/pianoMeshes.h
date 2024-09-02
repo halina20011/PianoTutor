@@ -1,6 +1,14 @@
 #ifndef __PIANO_MESHES__
 #define __PIANO_MESHES__
 
+#include <stdlib.h>
+
+#define GLEW_STATIC
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+
+#define TEXT_SIZE 10
+
 enum Meshes{
     // CLEFS
     MESH_NULL,
@@ -66,7 +74,29 @@ enum Meshes{
 
     TEXT_START = NOTE_START + 12,
     
-    MESHES_SIZE = TEXT_START + 10,
+    MESHES_SIZE = TEXT_START + TEXT_SIZE,
 };
+
+#define MESHES_SIZE TEXT_START + TEXT_SIZE
+
+// size the the shared buffer for gpu
+#define VERTEX_SIZE (3)
+#define VERTEX_BYTES_SIZE (VERTEX_SIZE * sizeof(float))
+#define VERTEX_BUFFER_COUNT ((4 * 1024 * 1024) / VERTEX_BYTES_SIZE)
+#define VERTEX_BUFFER_BYTES_SIZE (VERTEX_BYTES_SIZE * VERTEX_BUFFER_COUNT)
+
+enum VertexBufferItemType{
+    VERTEX_BUFFER_MESHES,
+    // VERTEX_BUFFER_TEXT,
+    VERTEX_BUFFER_WHITE_KEYS,
+    VERTEX_BUFFER_BLACK_KEYS,
+    VERTEX_BUFFER_LINES,
+    
+    VERTEX_BUFFER_SIZE
+};
+
+void vertexBufferSet(enum VertexBufferItemType item, float *data, size_t size);
+GLint vertexBufferGetPosition(enum VertexBufferItemType item);
+GLint vertexBufferGetSize(enum VertexBufferItemType item);
 
 #endif
