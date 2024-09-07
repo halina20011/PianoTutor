@@ -29,9 +29,9 @@ struct Piano *pianoInit(struct Measure **measures, size_t measureSize, bool hide
 
     piano->midiDevice = -1;
     piano->midiDevice = midiDeviceInit("auto");
-    // if(piano->midiDevice == -1){
-    //     exit(1);
-    // }
+    if(piano->midiDevice == -1){
+        exit(1);
+    }
 
     piano->playedNotesVector = PlayedNotePVectorInit();
     piano->pressedNotesVector = PressedNoteVectorInit();
@@ -55,8 +55,10 @@ struct Piano *pianoInit(struct Measure **measures, size_t measureSize, bool hide
 }
 
 void pressNote(struct Piano *piano, struct Note *note, Division divisionCounter){
-    sendNoteEvent(piano->midiDevice, NOTE_ON, &note->pitch, 100);
-    
+    if(piano->pianoPlay->pianoMode == PIANO_MODE_PLAY){
+        sendNoteEvent(piano->midiDevice, NOTE_ON, &note->pitch, 100);
+    }
+
     piano->playedNotes[notePitchToPitch(&note->pitch)] = true;
 
     struct PlayedNote *pressedNote = malloc(sizeof(struct PlayedNote));
@@ -68,7 +70,10 @@ void pressNote(struct Piano *piano, struct Note *note, Division divisionCounter)
 
 void unpressNote(struct Piano *piano, size_t i){
     struct PlayedNote *pressedNote = piano->playedNotesVector->data[i];
-    sendNoteEvent(piano->midiDevice, NOTE_OFF, &pressedNote->note->pitch, 0);
+    
+    if(piano->pianoPlay->pianoMode == PIANO_MODE_PLAY){
+        sendNoteEvent(piano->midiDevice, NOTE_OFF, &pressedNote->note->pitch, 0);
+    }
 
     piano->playedNotes[notePitchToPitch(&pressedNote->note->pitch)] = false;
 
@@ -87,124 +92,224 @@ void unpressNote(struct Piano *piano, size_t i){
     piano->playedNotesVector->size--;
 }
 
-void pianoPlaySong(struct Piano *piano){
-    struct Measure **measures = piano->measures;
-    size_t measureIndex = 0;
-    Division currDivision = -1;
-    double currBmp = 106;
-    double prevTime = 0;
-    struct Attributes currAttributes = {};
-    double divisionTimer = 0;
+void pianoPlayInit(struct Piano *piano, enum PianoMode pianoMode){
+    struct PianoPlay *pianoPlay = calloc(1, sizeof(struct PianoPlay));
 
     glfwSwapInterval(0);
-    updateAttributes(measures[0]->attributes[0], &currAttributes);
-    size_t divisionCounter = 0;
-    int currTimerLevel = 0;
-    int fps = 0;
-    double percentage = 0;
-    while(!glfwWindowShouldClose(interface->g->window) && measureIndex < piano->measureSize){
-        draw(piano, percentage, KEYBOARD_SHEET_MODE);
-        // glfwSwapBuffers(interface->g->window);
-        // processPollEvents();
-        // glfwPollEvents();
+    struct Measure **measures = piano->measures;
+    updateAttributes(measures[0]->attributes[0], &pianoPlay->currAttributes);
 
-        if(interface->paused){
+    pianoPlay->speedScale = 1.0f;
+    pianoPlay->currBmp = 120;
+    piano->pianoPlay = pianoPlay;
+
+    pianoPlay->pianoMode = pianoMode;
+
+    // pianoPlay->pause = 2;
+    // turnNotes(piano);
+}
+
+void pianoPlayCalculateError(struct Piano *piano){
+    if(0 < piano->pianoPlay->pause){
+        return;
+    }
+
+    for(size_t n = 0; n < piano->playedNotesVector->size; n++){
+        struct PlayedNote *playedNote = piano->playedNotesVector->data[n];
+        Pitch pitch = notePitchToPitch(&playedNote->note->pitch);
+        // check if the played note is being pressed
+        if(!piano->pressedNotes[pitch]){
+            double p = piano->pianoPlay->percentage;
+            double error = -4 * p * (1.0 - p);
+            double prevError = piano->pressedNotesPrevError[pitch];
+            double errorAlpha = prevError - error;
+            piano->pressedNotesError[pitch] += errorAlpha;
+            piano->pressedNotesPrevError[pitch] = error;
+            piano->error += errorAlpha / piano->playedNotesVector->size;
+        }
+    }
+}
+
+void pianoRewind(struct Piano *piano){
+    struct PianoPlay *pianoPlay = piano->pianoPlay;
+
+    piano->pianoPlay->pause = 5;
+    piano->error = 0;
+
+    pianoPlay->divisionTimer = 0;
+    pianoPlay->currDivision = 0;
+    pianoPlay->divisionCounter = pianoPlay->measureDivisionStart;
+
+    piano->playedNotesVector->size = 0;
+
+    for(uint8_t i = 0; i < NOTE_PRESS_BUFFER_SIZE; i++){
+        piano->pressedNotesError[i] = 0;
+        piano->pressedNotesPrevError[i] = 0;
+    }
+}
+
+void turnNotes(struct Piano *piano){
+    struct PianoPlay *pianoPlay = piano->pianoPlay;
+    struct Measure *currMeasure = piano->measures[pianoPlay->measureIndex];
+    
+    for(StaffNumber s = 0; s < pianoPlay->currAttributes.stavesNumber; s++){
+        Staff staff = currMeasure->staffs[s];
+        struct Notes *notes = staff[pianoPlay->currDivision];
+        if(!notes){
             continue;
         }
 
-        struct Measure *currMeasure = measures[measureIndex];
-        double time = glfwGetTime();
-        double alpha = time - prevTime;
-        prevTime = time;
-
-        double beat = 60.0 / currBmp;
-        double divisionDuration = (beat * 4.0) / (float)currMeasure->measureSize;
-        // debugf("dur %f\n", divisionDuration);
-        
-        // calculate "fps"
-        fps++;
-        if((int)time > currTimerLevel){
-            currTimerLevel++;
-            debugf("%i\n", fps);
-            fps = 0;
-        }
-
-        // debugf("time %f\n", time);
-        divisionTimer += alpha;
-        // debugf("%f\n", divisionTimer);
-
-        float oneD = 1.0f / (float)currMeasure->measureSize;
-        percentage = currDivision * oneD + oneD * divisionTimer / divisionDuration;
-        // printf("%f\n", percentage * 100);
-
-        if(divisionTimer < divisionDuration){
-            continue;
-        }
-
-        // new division
-        divisionTimer = 0;
-
-        // the prev division already passed so increase the index
-        currDivision++;
-        divisionCounter++;
-
-        if(currMeasure->measureSize <= currDivision){
-            measureIndex++;
-            currMeasure = measures[measureIndex];
-            currDivision = 0;
-            piano->sheet->currMeasure = measureIndex;
-            // exit(0);
-        }
-
-        // debugf("size: %zu\n", pressedNotes->size);
-        // debugf("position: %zu %i %f\n", measureIndex, currDivision, divisionDuration);
-
-        // turn off any notes
-        for(size_t i = 0; i < piano->playedNotesVector->size; ){
-            struct PlayedNote *pressedNote = piano->playedNotesVector->data[i];
-            if(pressedNote->endDivision <= divisionCounter){
-                unpressNote(piano, i);
-            }
-            else{
-                i++;
-            }
-        }
-
-        for(StaffNumber s = 0; s < currAttributes.stavesNumber; s++){
-            Staff staff = currMeasure->staffs[s];
-            struct Notes *notes = staff[currDivision];
-            if(!notes){
-                continue;
-            }
-
-            for(ChordSize c = 0; c < notes->chordSize; c++){
-                struct Note *note = notes->chord[c];
-                
-                if(!GET_BIT(note->flags, NOTE_FLAG_REST)){
-                    pressNote(piano, note, divisionCounter);
-                }
+        for(ChordSize c = 0; c < notes->chordSize; c++){
+            struct Note *note = notes->chord[c];
+            
+            if(!GET_BIT(note->flags, NOTE_FLAG_REST)){
+                pressNote(piano, note, pianoPlay->divisionCounter);
             }
         }
     }
 }
 
-void pianoLearnSong(struct Piano *piano){
+bool pianoPlayUpdate(struct Piano *piano){
     struct Measure **measures = piano->measures;
-    size_t measureIndex = 0;
-    Division currDivision = -1;
-    double currBmp = 12;
-    double prevTime = 0;
-    struct Attributes currAttributes = {};
-    double divisionTimer = 0;
 
-    glfwSwapInterval(0);
-    updateAttributes(measures[0]->attributes[0], &currAttributes);
-    size_t divisionCounter = 0;
-    int currTimerLevel = 0;
-    int fps = 0;
-    double percentage = 0;
-    while(!glfwWindowShouldClose(interface->g->window) && measureIndex < piano->measureSize){
-        draw(piano, percentage, KEYBOARD_PIANO_MODE);
+    struct PianoPlay *pianoPlay = piano->pianoPlay;
+
+    struct Measure *currMeasure = measures[pianoPlay->measureIndex];
+    double time = glfwGetTime();
+    double alpha = (time - pianoPlay->prevTime) * pianoPlay->speedScale;
+    pianoPlay->prevTime = time;
+
+    if(interface->paused){
+        if(interface->key == 'N'){
+            alpha = 1.0f / 30.0f;
+            interface->key = 0;
+        }
+        else{
+            pianoPlay->prevTime = glfwGetTime();
+            return false;
+        }
+    }
+
+    // debugf("alpha: %f\n", alpha);
+
+    double beat = 60.0 / pianoPlay->currBmp;
+    double divisionDuration = (beat * 4.0) / (float)currMeasure->measureSize;
+    // debugf("dur %f\n", divisionDuration);
+    
+    // calculate "fps"
+    pianoPlay->fps++;
+    if(pianoPlay->currTimerLevel < (int)time){
+        pianoPlay->currTimerLevel++;
+        debugf("fps: %i\n", pianoPlay->fps);
+        pianoPlay->fps = 0;
+    }
+
+    // debugf("time %f\n", time);
+    pianoPlay->divisionTimer += alpha;
+
+    float oneD = 1.0f / (float)currMeasure->measureSize;
+    pianoPlay->percentage = pianoPlay->currDivision * oneD + oneD * (pianoPlay->divisionTimer / divisionDuration);
+    // if(pianoPlay->pause){
+    //     pianoPlay->percentage = pianoPlay->currDivision * oneD;
+    //     // pianoPlay->percentage = oneD * pianoPlay->divisionTimer / divisionDuration;
+    //     // pianoPlay->percentage = 0;
+    // }
+
+    // printf("%f\n", percentage * 100);
+    // debugf("division timer: %f percentage: %f\n", pianoPlay->divisionTimer, pianoPlay->percentage);
+
+    if(pianoPlay->divisionTimer < divisionDuration){
+        return true;
+    }
+
+    pianoPlay->divisionTimer = 0;
+
+    if(pianoPlay->pause){
+        pianoPlay->pause--;
+        if(pianoPlay->pause != 0){
+            return false;
+        }
+        
+        // pianoPlay->percentage = 0;
+        turnNotes(piano);
+        return false;
+    }
+
+    // the prev division already passed so increase the index
+    pianoPlay->currDivision++;
+    pianoPlay->divisionCounter++;
+
+    if(currMeasure->measureSize <= pianoPlay->currDivision){
+        pianoPlay->measureIndex++;
+        currMeasure = measures[pianoPlay->measureIndex];
+        pianoPlay->currDivision = 0;
+        pianoPlay->measureDivisionStart = pianoPlay->divisionCounter;
+        piano->sheet->currMeasure = pianoPlay->measureIndex;
+    }
+
+    // debugf("size: %zu\n", pressedNotes->size);
+    // debugf("position: %zu %i %f\n", measureIndex, currDivision, divisionDuration);
+
+    // turn off any notes
+    for(size_t i = 0; i < piano->playedNotesVector->size; ){
+        struct PlayedNote *pressedNote = piano->playedNotesVector->data[i];
+        if(pressedNote->endDivision <= piano->pianoPlay->divisionCounter){
+            Pitch pitch = notePitchToPitch(&pressedNote->note->pitch);
+            piano->error -= piano->pressedNotesError[pitch];
+            piano->pressedNotesError[pitch] = 0;
+            piano->pressedNotesPrevError[pitch] = 0;
+            unpressNote(piano, i);
+        }
+        else{
+            i++;
+        }
+    }
+
+    turnNotes(piano);
+
+    return true;
+}
+
+void pianoPlaySong(struct Piano *piano){
+    pianoPlayInit(piano, PIANO_MODE_PLAY);
+
+    struct PianoPlay *pianoPlay = piano->pianoPlay;
+
+    pianoPlay->speedScale = 0.1f;
+
+    while(!glfwWindowShouldClose(interface->g->window) && pianoPlay->measureIndex < piano->measureSize){
+        draw(piano, KEYBOARD_SHEET_MODE);
+
+        if(interface->paused){
+            continue;
+        }
+
+        if(!pianoPlayUpdate(piano)){
+            continue;
+        }
+    }
+}
+
+void pianoLearnSong(struct Piano *piano){
+    pianoPlayInit(piano, PIANO_MODE_LEARN);
+
+    struct PianoPlay *pianoPlay = piano->pianoPlay;
+
+    pianoPlay->speedScale = 0.4;
+    
+    while(!glfwWindowShouldClose(interface->g->window) && pianoPlay->measureIndex < piano->measureSize){
+        draw(piano, KEYBOARD_PIANO_MODE);
+        
+        if(!pianoPlayUpdate(piano)){
+            continue;
+        }
+        
         midiRead(piano);
+        pianoPlayCalculateError(piano);
+
+        if(0.5 < piano->error){
+            pianoRewind(piano);
+        } 
+        // printf("%f\n", piano->error);
     }
 }

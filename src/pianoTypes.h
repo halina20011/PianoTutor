@@ -158,13 +158,43 @@ struct Piano{
     int midiDevice;
 
     struct View view;
+    
+    double error;
     // notes that are being played by the sheet
     uint8_t playedNotes[NOTE_PRESS_BUFFER_SIZE];
     struct PlayedNotePVector *playedNotesVector;
     
     // notes that re being pressed by the user
     uint8_t pressedNotes[NOTE_PRESS_BUFFER_SIZE];
+    float pressedNotesPrevError[NOTE_PRESS_BUFFER_SIZE];
+    double pressedNotesError[NOTE_PRESS_BUFFER_SIZE];
     struct PressedNoteVector *pressedNotesVector;
+
+    struct PianoPlay *pianoPlay;
+};
+
+enum PianoMode{
+    PIANO_MODE_PLAY,
+    PIANO_MODE_LEARN
+};
+
+struct PianoPlay{
+    enum PianoMode pianoMode;
+    float speedScale;
+    Division pause;
+
+    size_t measureIndex;
+    Division currDivision;
+    double currBmp;
+    double prevTime;
+    struct Attributes currAttributes;
+    double divisionTimer;
+
+    Division measureDivisionStart;
+    Division divisionCounter;
+    int currTimerLevel;
+    int fps;
+    double percentage;
 };
 
 struct Sheet{

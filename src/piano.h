@@ -52,11 +52,21 @@ void computeMeasures(struct Piano *piano);
 void pressNote(struct Piano *piano, struct Note *note, Division divisionCounter);
 void unpressNote(struct Piano *piano, size_t i);
 
+void pianoPlayInit(struct Piano *piano, enum PianoMode pianoMode);
+void pianoPlayCalculateError(struct Piano *piano);
+void pianoPlayCalculateError();
+bool pianoPlayUpdate(struct Piano *piano);
+
+
+void pianoPlayCalculateError(struct Piano *piano);
+void pianoRewind(struct Piano *piano);
+void turnNotes(struct Piano *piano);
+
 // pianoDraw.c
-void draw(struct Piano *piano, double percentage, enum KeyboardMode keyboardMode);
+void draw(struct Piano *piano, enum KeyboardMode keyboardMode);
 void drawSheet(struct Piano *piano);
 void drawKeyboard(struct Piano *piano, enum KeyboardMode keyboardMode);
-void drawNotes(struct Piano *piano, double_t percentage);
+void drawNotes(struct Piano *piano);
 
 void pianoPlaySong(struct Piano *piano);
 void pianoLearnSong(struct Piano *piano);

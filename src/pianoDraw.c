@@ -12,7 +12,7 @@ extern GLint colorUniform;
 
 extern struct MeshBoundingBox *meshBoundingBoxes;
 
-void draw(struct Piano *piano, double percentage, enum KeyboardMode keyboardMode){
+void draw(struct Piano *piano, enum KeyboardMode keyboardMode){
     glClear(GL_COLOR_BUFFER_BIT);
     
     viewReset();
@@ -25,7 +25,7 @@ void draw(struct Piano *piano, double percentage, enum KeyboardMode keyboardMode
     glm_translate(globMatrix, globPos);
     glUniformMatrix4fv(globalMatUniform, 1, GL_FALSE, (float*)globMatrix);
 
-    drawNotes(piano, percentage);
+    drawNotes(piano);
     drawKeyboard(piano, keyboardMode);
 
     drawSheet(piano);
@@ -231,7 +231,7 @@ void drawSheet(struct Piano *piano){
     }
 }
 
-void drawNotes(struct Piano *piano, double percentage){
+void drawNotes(struct Piano *piano){
     mat4 mat = {};
     glm_mat4_identity(mat);
     glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)mat);
@@ -240,9 +240,7 @@ void drawNotes(struct Piano *piano, double percentage){
 
     float scale = 2.0f / piano->keyboard.keyboardWidth;
 
-    size_t linesStartIndex = vertexBufferGetPosition(VERTEX_BUFFER_LINES);
-
-    float scaleY = 2.0f / MBB_MAX(LINES)[1];
+    GLint linesStartIndex = vertexBufferGetPosition(VERTEX_BUFFER_LINES); float scaleY = 2.0f / MBB_MAX(LINES)[1];
     float scaleX = 1.0f / (piano->view.items[VIEW_ITEM_TYPE_NOTES].height / 2.0f);
     vec3 scaleLineVec = {scaleX * scale, scaleY, scale};
     glm_translate(mat, (vec3){-1, -1, 0});
@@ -273,8 +271,14 @@ void drawNotes(struct Piano *piano, double percentage){
                     }
                     Pitch p = notePitchToPitch(&note->pitch);
                     enum Meshes meshId = NOTE_START + pitchToNote(p) - C;
-                    float height = (float)note->duration / (float)measure->measureSize;
-                    float y = (float)d / (float)measure->measureSize + offset - percentage;
+                    float height = ((float)note->duration / (float)measure->measureSize) * 0.9;
+                    float y = ((float)d + piano->pianoPlay->pause) / (float)measure->measureSize + offset - piano->pianoPlay->percentage;
+                    // float y = ((float)d) / (float)measure->measureSize + offset - piano->pianoPlay->percentage;
+                    
+                    // TODO: better notes clip
+                    // if(1 < y || y < -1){
+                    //     continue;
+                    // }
 
                     float octaveOffset = (int)(p / 12) - piano->keyboard.firstOctave;
                     mat4 matrix = {};
@@ -286,7 +290,7 @@ void drawNotes(struct Piano *piano, double percentage){
                     // GLint index = piano->meshesDataStart[meshId] / 3 + piano->meshesDataStartOffset;
                     GLint index = piano->meshesDataStart[meshId] / 3 + vertexBufferGetPosition(VERTEX_BUFFER_MESHES);
                     size_t trigCount = piano->meshesDataSize[meshId] / 3;
-
+                    
                     glDrawArrays(GL_TRIANGLES, index, trigCount);
                     // enum Meshes note = ;
                     // measure->measureSize

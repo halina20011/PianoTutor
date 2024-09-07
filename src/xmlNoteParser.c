@@ -236,6 +236,11 @@ void parseAccidental(xmlNodePtr parent, struct Note *note){
     else if(xmlStrcmp(body, XML_CHAR"flat") == 0){
         SET_BIT(note->flags, NOTE_FLAG_FLAT);
     }
+    else{
+        SET_BIT(note->flags, NOTE_FLAG_SHARP);
+        // fprintf(stderr, "accidental '%s' not implemented\n", body);
+        // exit(1);
+    }
     free(body);
     // debugf("accidental: %i\n", note->flags);
 }

@@ -52,7 +52,7 @@ enum Meshes getAccidental(struct Note *note){
         return FLAT;
     }
 
-    fprintf(stderr, "missing accidental value\n");
+    fprintf(stderr, "missing accidental value: '%i'\n");
     exit(1);
 }
 
@@ -228,7 +228,7 @@ void computeNote(struct ItemPVector *itemVector, struct Note *note, StaffNumber 
     ItemPVectorPush(itemVector, item);
 }
 
-    // debugf("lower lines %i <%f>\n", lowerLines, diff);
+// debugf("lower lines %i <%f>\n", lowerLines, diff);
 #define ADD_NOTE_LINES(start, _diff, lineOffset){\
     int lowerLines = (int)(_diff / 2.f + 1);\
     for(int i = 0; i < lowerLines; i++){\
