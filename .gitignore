@@ -1,6 +1,7 @@
 build/
 .gdb_history
 **/*.txt
+!CMakeLists.txt
 Notes/
 Assets/Images
 Assets/Fonts/

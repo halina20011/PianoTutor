@@ -91,6 +91,7 @@ int main(int argc, char **argv){
     // computeKeyboard(piano, &(struct NotePitch){0, 0, 0, 0}, &(struct NotePitch){6, 6, 0, 0});
     Pitch start = piano->sheet->staffsPitchExtreme[piano->sheet->staffNumber - 1].min;
     Pitch end = piano->sheet->staffsPitchExtreme[0].max;
+    debugf("start, end: %i %i\n", start, end);
     computeKeyboard(piano, start, end);
 
     pianoPlaySong(piano);

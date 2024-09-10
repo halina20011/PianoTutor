@@ -31,13 +31,13 @@ void processPollEvents(){
     bool right = glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
 
     if(prevMeasureMovement + 0.2f < currTime){
-        size_t currMeasure = interface->piano->sheet->currMeasure;
+        size_t currMeasure = interface->piano->pianoPlay->measureIndex;
         if(left){
             if(currMeasure == 0){
                 currMeasure = interface->piano->measureSize - 1;
             }
             else{
-                interface->piano->sheet->currMeasure--;
+                interface->piano->pianoPlay->measureIndex--;
             }
             prevMeasureMovement = glfwGetTime();
         }
@@ -47,7 +47,7 @@ void processPollEvents(){
                 currMeasure = 0;
             }
             else{
-                interface->piano->sheet->currMeasure++;
+                interface->piano->pianoPlay->measureIndex++;
             }
             prevMeasureMovement = glfwGetTime();
         }

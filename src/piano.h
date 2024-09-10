@@ -67,6 +67,7 @@ void draw(struct Piano *piano, enum KeyboardMode keyboardMode);
 void drawSheet(struct Piano *piano);
 void drawKeyboard(struct Piano *piano, enum KeyboardMode keyboardMode);
 void drawNotes(struct Piano *piano);
+void drawError(struct Piano *piano);
 
 void pianoPlaySong(struct Piano *piano);
 void pianoLearnSong(struct Piano *piano);

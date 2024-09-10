@@ -72,6 +72,7 @@ void sendNoteEvent(int midiDevice, uint8_t eventType, struct NotePitch *notePitc
 void addNote(struct Piano *piano, uint8_t note){
     uint8_t index = (uint8_t)piano->pressedNotesVector->size;
     struct PressedNote p = {note, index};
+    printf("note: %i\n", note);
     PressedNoteVectorPush(piano->pressedNotesVector, p);
     piano->pressedNotes[note] = index;
 }

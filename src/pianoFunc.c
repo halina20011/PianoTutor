@@ -335,7 +335,6 @@ void computeKeyboard(struct Piano *piano, Pitch start, Pitch end){
     piano->keyboard.octaveWidth = octaveWidth;
 
     float widht = 0;
-    size_t counter = 0;
     size_t whiteKeysPointer = 0, blackKeysPointer = 0;
     for(uint8_t i = 0; i < size; i++){
         uint8_t p = i + start;

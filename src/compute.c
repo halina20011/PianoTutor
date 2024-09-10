@@ -461,8 +461,8 @@ void computeMeasures(struct Piano *piano){
 
         for(StaffNumber s = 0; s < staffNumber; s++){
             struct Measure *measure = piano->measures[i];
-            staffsPitchExtreme[s].min = MIN(staffsPitchExtreme[s].min, measure->pitchExtreme->min);
-            staffsPitchExtreme[s].max = MAX(staffsPitchExtreme[s].max, measure->pitchExtreme->max);
+            staffsPitchExtreme[s].min = MIN(staffsPitchExtreme[s].min, measure->pitchExtreme[s].min);
+            staffsPitchExtreme[s].max = MAX(staffsPitchExtreme[s].max, measure->pitchExtreme[s].max);
         }
 
         // add measue end bar

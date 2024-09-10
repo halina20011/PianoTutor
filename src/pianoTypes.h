@@ -199,7 +199,7 @@ struct PianoPlay{
 
 struct Sheet{
     float cursor;
-    size_t currMeasure;
+    // size_t currMeasure;
 
     struct ItemMeasure **measures;
     // struct NotePitchExtreme *notePitchExtreme;
