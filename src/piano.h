@@ -25,6 +25,8 @@ typedef uint8_t MeshStrIdSize;
 #define WHITE_KEY 0
 #define BLACK_KEY 1
 
+#define NOTE_OCTAVE(pitch) ((pitch) / 12)
+
 enum KeyboardMode{
     KEYBOARD_SHEET_MODE,
     KEYBOARD_PIANO_MODE

@@ -65,12 +65,13 @@ char noteNames[][3] = {
 };
 
 void printNote(Pitch pitch){
-    debugf("note %i [%i:%s]\n", pitch, pitch / 12, noteNames[pitch % 12]);   
+    printf("note %i [%i:%s]\n", pitch, NOTE_OCTAVE(pitch), noteNames[pitch % 12]);   
 }
 
 void pressNote(struct Piano *piano, struct Note *note, Division divisionCounter){
     Pitch pitch = notePitchToPitch(&note->pitch);
-    // printNote(pitch);
+    debugf("played ");
+    printNote(pitch);
     if(piano->pianoPlay->pianoMode == PIANO_MODE_PLAY){
         sendNoteEvent(piano->midiDevice, NOTE_ON, &note->pitch, 100);
     }
@@ -79,7 +80,8 @@ void pressNote(struct Piano *piano, struct Note *note, Division divisionCounter)
 
     struct PlayedNote *pressedNote = malloc(sizeof(struct PlayedNote));
     pressedNote->note = note;
-    pressedNote->endDivision = note->duration + divisionCounter;
+    pressedNote->startDivision = divisionCounter;
+    pressedNote->endDivision = divisionCounter + note->duration;
     // debugf("adding note %p at %zu\n", pressedNote, pressedNotes->size - 1);
     PlayedNotePVectorPush(piano->playedNotesVector, pressedNote);
     // interface->paused = true;
@@ -113,7 +115,7 @@ void unpressNote(struct Piano *piano, size_t i){
 void pianoPlayInit(struct Piano *piano, enum PianoMode pianoMode){
     struct PianoPlay *pianoPlay = calloc(1, sizeof(struct PianoPlay));
 
-    glfwSwapInterval(0);
+    // glfwSwapInterval(0);
     struct Measure **measures = piano->measures;
     updateAttributes(measures[0]->attributes[0], &pianoPlay->currAttributes);
 
@@ -142,27 +144,32 @@ void pianoPlayCalculateError(struct Piano *piano){
         return;
     }
 
-    if(piano->playedNotesVector->size != 0){
-        pressedNotes(piano);
-    }
+    // if(piano->pressedNotesVector->size != 0){
+    //     pressedNotes(piano);
+    // }
 
     for(size_t n = 0; n < piano->playedNotesVector->size; n++){
         struct PlayedNote *playedNote = piano->playedNotesVector->data[n];
         Pitch pitch = notePitchToPitch(&playedNote->note->pitch);
         // check if the played note is being pressed
         if(!piano->pressedNotes[pitch]){
-            debugf("note %i [%i:%s] should have been pressed\n", pitch, pitch / 12, noteNames[pitch % 12]);   
-            double p = piano->pianoPlay->percentage;
-            double error = -4 * p * (1.0 - p);
+            // debugf("note %i [%i:%s] should have been pressed\n", pitch, NOTE_OCTAVE(pitch), noteNames[pitch % 12]);   
+            // double p = piano->pianoPlay->percentage;
+            double notePercentage = (double)(piano->pianoPlay->divisionCounter - playedNote->startDivision) / (double)(playedNote->note->duration) + piano->pianoPlay->percentage * (1.0f / playedNote->note->duration);
+            // printf("%f\n", p);
+            // printf("%f\n", notePercentage);
+            // double error = -4 * p * (1.0 - p);
+            double error = notePercentage * notePercentage;
             double prevError = piano->pressedNotesPrevError[pitch];
-            double errorAlpha = prevError - error;
-            piano->pressedNotesError[pitch] += errorAlpha;
-            piano->pressedNotesPrevError[pitch] = prevError;
-            piano->error += errorAlpha / piano->playedNotesVector->size;
+            double errorAlpha = error - prevError;
+            piano->pressedNotesError[pitch] = error;
+            piano->pressedNotesPrevError[pitch] = error;
+            // piano->error += errorAlpha / piano->playedNotesVector->size;
+            piano->error += errorAlpha;
         }
     }
     
-    debugf("error %f\n", piano->error);
+    // debugf("error %f\n", piano->error);
 }
 
 void pianoRewind(struct Piano *piano){
@@ -237,7 +244,7 @@ bool pianoPlayUpdate(struct Piano *piano){
     pianoPlay->fps++;
     if(pianoPlay->currTimerLevel < (int)time){
         pianoPlay->currTimerLevel++;
-        debugf("fps: %i\n", pianoPlay->fps);
+        // debugf("fps: %i\n", pianoPlay->fps);
         pianoPlay->fps = 0;
     }
 

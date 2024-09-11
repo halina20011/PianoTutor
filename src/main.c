@@ -94,8 +94,8 @@ int main(int argc, char **argv){
     debugf("start, end: %i %i\n", start, end);
     computeKeyboard(piano, start, end);
 
-    pianoPlaySong(piano);
-    // pianoLearnSong(piano);
+    // pianoPlaySong(piano);
+    pianoLearnSong(piano);
 
     glfwTerminate();
     return 0;

@@ -30,3 +30,6 @@ debug: make
 init:
 	mkdir build;
 	cd build && cmake ..
+
+sync:
+	rsync -avz --exclude 'build' --exclude '.git' 192.168.11.245:/${HOME}/Programming/C/PianoTutor/ ./

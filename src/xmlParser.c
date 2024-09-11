@@ -144,6 +144,7 @@ long parseProp(xmlNodePtr note, char *name){
 
 uint8_t stepArray[] = {0, 2, 4, 5, 7, 9, 11};
 
+// C4 => 60
 uint8_t notePitchToPitch(struct NotePitch *pitch){
     uint8_t step = stepArray[pitch->step];
     uint8_t r = (pitch->octave) * 12 + step + pitch->alter;

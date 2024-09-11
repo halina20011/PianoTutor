@@ -211,7 +211,7 @@ struct Sheet{
 };
 
 struct PlayedNote{
-    Division endDivision;
+    Division startDivision, endDivision;
     struct Note *note;
 };
 

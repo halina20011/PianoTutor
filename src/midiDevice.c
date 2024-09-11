@@ -5,6 +5,8 @@
 
 VECTOR_TYPE_FUNCTIONS(struct PressedNote, PressedNoteVector, "");
 
+extern void printNote(Pitch pitch);
+
 int midiDeviceInit(char *path){
     char *midiDevicePath = NULL;
     if(strcmp(path, "auto") == 0){
@@ -72,12 +74,18 @@ void sendNoteEvent(int midiDevice, uint8_t eventType, struct NotePitch *notePitc
 void addNote(struct Piano *piano, uint8_t note){
     uint8_t index = (uint8_t)piano->pressedNotesVector->size;
     struct PressedNote p = {note, index};
-    printf("note: %i\n", note);
+    
+    debugf("pressed ");
+    printNote(note);
+
     PressedNoteVectorPush(piano->pressedNotesVector, p);
     piano->pressedNotes[note] = index;
 }
 
 void removeNote(struct Piano *piano, uint8_t note){
+    debugf("unpressed ");
+    printNote(note);
+
     uint8_t notePos = piano->pressedNotes[note];
     piano->pressedNotes[note] = UINT8_MAX;
     if(1 < piano->pressedNotesVector->size){
@@ -116,8 +124,8 @@ void midiRead(struct Piano *piano){
                 numDataBytes--;
 
                 if(numDataBytes == 0){
-                    debugf("MIDI Event: Status=%i, Data1=%i, Data2=%i\n", statusByte, dataBytes[0], dataBytes[1]);
-                    uint8_t note = dataBytes[1];
+                    uint8_t note = dataBytes[1] - 12;
+                    // debugf("MIDI Event: Status=%i, Data1=%i, Data2=%i => note: %i\n", statusByte, dataBytes[0], dataBytes[1], note);
                     if(statusByte == NOTE_ON){
                         addNote(piano, note);
                         // piano->playedNotes[note] = true;

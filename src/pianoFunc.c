@@ -299,7 +299,7 @@ void computeKeyboard(struct Piano *piano, Pitch start, Pitch end){
 
     // uint8_t start = notePitchToPitch(s);
     // uint8_t end = notePitchToPitch(e);
-    piano->keyboard.firstOctave = start / 12;
+    piano->keyboard.firstOctave = NOTE_OCTAVE(start);
     uint8_t size = end - start + 1;
     debugf("start end: %i %i size %i\n", start, end, size);
 
@@ -339,7 +339,7 @@ void computeKeyboard(struct Piano *piano, Pitch start, Pitch end){
     for(uint8_t i = 0; i < size; i++){
         uint8_t p = i + start;
         uint8_t note = p % 12;
-        uint8_t octave = p / 12 - (start / 12);
+        uint8_t octave = NOTE_OCTAVE(p) - NOTE_OCTAVE(start);
         
         enum Meshes meshId = noteToMesh[note];
         size_t meshSize = piano->meshesDataSize[meshId];
