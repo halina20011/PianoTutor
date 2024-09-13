@@ -94,6 +94,10 @@ int main(int argc, char **argv){
     debugf("start, end: %i %i\n", start, end);
     computeKeyboard(piano, start, end);
 
+    // float maxError = noteErrorSize(10);
+    // debugf("max note error %f\n", maxError);
+    // return 0;
+
     // pianoPlaySong(piano);
     pianoLearnSong(piano);
 

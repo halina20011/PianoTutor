@@ -183,6 +183,8 @@ struct PianoPlay{
     float speedScale;
     Division pause;
 
+    float correctStreak, incorrectStreak;
+
     size_t measureIndex;
     Division currDivision;
     double currBmp;

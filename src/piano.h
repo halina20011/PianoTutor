@@ -27,6 +27,8 @@ typedef uint8_t MeshStrIdSize;
 
 #define NOTE_OCTAVE(pitch) ((pitch) / 12)
 
+#define NOTE_UNPRESED UINT8_MAX
+
 enum KeyboardMode{
     KEYBOARD_SHEET_MODE,
     KEYBOARD_PIANO_MODE
@@ -51,6 +53,7 @@ void computeKeyboard(struct Piano *piano, Pitch start, Pitch end);
 struct Piano *pianoInit(struct Measure **measures, size_t measureSize, bool hideKeyboard, bool hideNotes);
 void computeMeasures(struct Piano *piano);
 
+void pressedNotes(struct Piano *piano);
 void pressNote(struct Piano *piano, struct Note *note, Division divisionCounter);
 void unpressNote(struct Piano *piano, size_t i);
 
@@ -60,6 +63,9 @@ void pianoPlayCalculateError();
 bool pianoPlayUpdate(struct Piano *piano);
 
 
+float errorEquation(float p);
+float noteAlphaError(Pitch pitch, float notePercentage);
+float noteErrorSize(size_t steps);
 void pianoPlayCalculateError(struct Piano *piano);
 void pianoRewind(struct Piano *piano);
 void turnNotes(struct Piano *piano);

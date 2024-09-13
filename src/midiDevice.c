@@ -75,25 +75,32 @@ void addNote(struct Piano *piano, uint8_t note){
     uint8_t index = (uint8_t)piano->pressedNotesVector->size;
     struct PressedNote p = {note, index};
     
-    debugf("pressed ");
-    printNote(note);
+    // debugf("pressed ");
+    // printNote(note);
 
     PressedNoteVectorPush(piano->pressedNotesVector, p);
     piano->pressedNotes[note] = index;
+    
+    // pressedNotes(piano);
 }
 
 void removeNote(struct Piano *piano, uint8_t note){
-    debugf("unpressed ");
-    printNote(note);
+    // debugf("unpressed ");
+    // printNote(note);
 
     uint8_t notePos = piano->pressedNotes[note];
-    piano->pressedNotes[note] = UINT8_MAX;
+    piano->pressedNotes[note] = NOTE_UNPRESED;
     if(1 < piano->pressedNotesVector->size){
-        struct PressedNote last = piano->pressedNotesVector->data[piano->pressedNotesVector->size - 1];
-        piano->pressedNotes[last.index] = notePos;
-        piano->pressedNotesVector->data[notePos] = last;
+        struct PressedNote lastNote = piano->pressedNotesVector->data[piano->pressedNotesVector->size - 1];
+
+        // edit the last's note position to the unpressed one
+        piano->pressedNotes[lastNote.pitch] = notePos;
+        lastNote.index = notePos;
+        piano->pressedNotesVector->data[notePos] = lastNote;
     }
     piano->pressedNotesVector->size--;
+
+    // pressedNotes(piano);
 }
 
 void midiRead(struct Piano *piano){

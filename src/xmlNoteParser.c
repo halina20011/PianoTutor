@@ -221,8 +221,8 @@ void parsePitch(xmlNodePtr node, struct Note *note){
         children = children->next;
     }
 
-    Pitch pitch = notePitchToPitch(&note->pitch);
-    debugf("step: %i alter %i octave %i => %i\n", note->pitch.step, note->pitch.alter, note->pitch.octave, pitch);
+    // Pitch pitch = notePitchToPitch(&note->pitch);
+    // debugf("step: %i alter %i octave %i => %i\n", note->pitch.step, note->pitch.alter, note->pitch.octave, pitch);
 }
 
 // <accidental>
