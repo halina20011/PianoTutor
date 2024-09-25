@@ -178,11 +178,19 @@ enum PianoMode{
     PIANO_MODE_LEARN
 };
 
+enum PianoLearnMode{
+    PIANO_LEARN_WAIT,
+    PIANO_LEARN_PRACTISE,
+};
+
 struct PianoPlay{
     enum PianoMode pianoMode;
-    float speedScale;
+    enum PianoLearnMode pianoLearnMode;
+
+    float speedScale, waitScale;
     Division pause;
 
+    Division lastRewind, maxDivision;
     float correctStreak, incorrectStreak;
 
     size_t measureIndex;

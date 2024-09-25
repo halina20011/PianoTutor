@@ -18,6 +18,8 @@
 #include "midiDevice.h"
 #include "view.h"
 
+#include "plot.h"
+
 #define KEYBOARD_KEY_SIZE 128
 typedef uint8_t MeshStrIdSize;
 #define MAX_MODEL_ID_SIZE 255

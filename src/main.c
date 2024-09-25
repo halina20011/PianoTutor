@@ -7,6 +7,8 @@
 #include "xmlParser.h"
 #include "piano.h"
 
+#include "plot.h"
+
 // TODO: use correct tempto from Song struct
 
 // TODO: mouse scale sections/views
@@ -32,28 +34,10 @@ char *difficulty;
 uint8_t percisionLevel = 3;
 bool asignNotes = false;
 bool hideKeyboard = false, hideNotes = false;
+extern bool plotValues;
 // bool useIndicator = false;
 
-struct InputParser inputParser = {
-    4,
-    30,
-    7,
-    {
-        FLAG_2_SIZE("-h", "--help", &printHelp, INPUT_TYPE_SWITCH, "print this help message"),
-        FLAG_2_SIZE("-f", "--file", &mxlFilePath, INPUT_TYPE_STR, "specifi mxl file"),
-        FLAG_1_SIZE("--device", &midiDevicePath, INPUT_TYPE_STR, "specifi path to midi device\n\
-                options: \"auto\", [absolutePath] [onlyMidiDeviceName]\n\
-                auto option will use any device that matches /dev/snd/midi* (default value is auto)"),
-        FLAG_1_SIZE("--mode", &mode, INPUT_TYPE_STR, "select mode [play, learn] (default is play)"),
-        FLAG_1_SIZE("--difficulty", &difficulty, INPUT_TYPE_STR, "select difficulty for play mode\n\
-                learn: does not go backword, it waits for every note to be played\n\
-                practise: counts a miss played notes in measure, if it reatches certain treshold it will put you 'n'\n\
-                          measures backwords"),
-        FLAG_1_SIZE("--hide-keyboard", &hideKeyboard, INPUT_TYPE_SWITCH, "hide keyboard section on the screen"),
-        FLAG_1_SIZE("--hide-notes", &hideKeyboard, INPUT_TYPE_SWITCH, "hide notes section on the screen"),
-        // FLAG_1_SIZE("--indicator", &useIndicator, INPUT_TYPE_SWITCH, "use keyboard indicator"),
-    },
-};
+struct InputParser inputParser;
 
 struct Interface *interface = NULL;
 GLuint elementArrayBuffer = 0;
@@ -63,13 +47,36 @@ GLint localMatUniform = 0;
 GLint viewMatUniform = 0;
 GLint colorUniform = 0;
 
+struct InputParser inputParser = {};
+void inputArguments(){
+    ADD_FLAG2("-h", "--help", &printHelp, INPUT_TYPE_SWITCH, "print this help message");
+    ADD_FLAG2("-f", "--file", &mxlFilePath, INPUT_TYPE_STR, "specifi mxl file");
+    ADD_FLAG1("--device", &midiDevicePath, INPUT_TYPE_STR, "specifi path to midi device\n\
+            options: \"auto\", [absolutePath] [onlyMidiDeviceName]\n\
+            auto option will use any device that matches /dev/snd/midi* (default value is auto)");
+    ADD_FLAG1("--mode", &mode, INPUT_TYPE_STR, "select mode [play, learn] (default is play)");
+
+    ADD_INPUT_OPTION("--learn-mode", &mode, INPUT_TYPE_STR, "select learn mode [wait, practise] (default is wait)", 
+            2, "wait", "practise");
+    ADD_FLAG1("--difficulty", &difficulty, INPUT_TYPE_STR, "select difficulty for play mode\n\
+            learn: does not go backword, it waits for every note to be played\n\
+            practise: counts a miss played notes in measure, if it reatches certain treshold it will put you 'n'\n\
+                      measures backwords");
+    ADD_FLAG1("--hide-keyboard", &hideKeyboard, INPUT_TYPE_SWITCH, "hide keyboard section on the screen");
+    ADD_FLAG1("--hide-notes", &hideKeyboard, INPUT_TYPE_SWITCH, "hide notes section on the screen");
+    ADD_FLAG1("--plot", &plotValues, INPUT_TYPE_SWITCH, "plot data values on screen");
+}
+
 int main(int argc, char **argv){
-    parseInput(inputParser, argc, argv);
+    inputInit(inputArguments);
+    parseInput(argc, argv);
 
     if(printHelp){
         printHelpMessage(inputParser);
         return 0;
     }
+
+    plotInit();
     
     interface = calloc(1, sizeof(struct Interface));
     interface->scale = 1;

@@ -38,6 +38,8 @@ set(SOURCES
     ./src/inputParser.c
     ./src/helpers.c
 
+    ./src/plot.c
+
     ./src/xmlParser.c
     ./src/xmlAttributeParser.c
     ./src/xmlNoteParser.c

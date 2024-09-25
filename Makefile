@@ -12,10 +12,18 @@ flags = -f ~/Documents/Notes/Megalovania.mxl
 # flags = -f ~/Documents/Notes/Shreksophone__Shrek_and_Donkey.mxl
 # flags = -f ~/Documents/MuseScore4/Scores/test.mxl
 
-flags += --hide-keyboard --hide-notes
+# flags += --hide-keyboard --hide-notes
 
 run: make
 	./build/main ${flags}
+
+plot: flags += --plot
+plot: make
+	# ./build/main ${flags} | tee /dev/tty | python livePlot.py
+	./build/main ${flags} | python livePlot.py
+# plot:
+# 	gcc ./build/test.c -lm -o ./build/main
+# 	./build/main ${flags} | tee /dev/tty | grep "PLOT: " | sed -n 's/PLOT: \[\(.*\)\] \(.*\)/\2/p' | tee /dev/tty | gnuplot -persist livePlot.gp
 
 make:
 	cd build && make
