@@ -34,7 +34,8 @@ char *difficulty;
 uint8_t percisionLevel = 3;
 bool asignNotes = false;
 bool hideKeyboard = false, hideNotes = false;
-extern bool plotValues;
+extern bool plotEnabled;
+bool showPlot = false;
 // bool useIndicator = false;
 
 struct InputParser inputParser;
@@ -64,7 +65,8 @@ void inputArguments(){
                       measures backwords");
     ADD_FLAG1("--hide-keyboard", &hideKeyboard, INPUT_TYPE_SWITCH, "hide keyboard section on the screen");
     ADD_FLAG1("--hide-notes", &hideKeyboard, INPUT_TYPE_SWITCH, "hide notes section on the screen");
-    ADD_FLAG1("--plot", &plotValues, INPUT_TYPE_SWITCH, "plot data values on screen");
+    ADD_FLAG1("--plot", &plotEnabled, INPUT_TYPE_SWITCH, "plot data values on screen");
+    ADD_FLAG1("--showPlot", &showPlot, INPUT_TYPE_SWITCH, "show error equation plot using gnuplot");
 }
 
 int main(int argc, char **argv){
@@ -74,6 +76,11 @@ int main(int argc, char **argv){
     if(printHelp){
         printHelpMessage(inputParser);
         return 0;
+    }
+
+    if(showPlot){
+        printPlotEquation();
+        exit(0);
     }
 
     plotInit();
@@ -101,6 +108,7 @@ int main(int argc, char **argv){
     debugf("start, end: %i %i\n", start, end);
     computeKeyboard(piano, start, end);
 
+    // plotNoteErrorSize(100);
     // float maxError = noteErrorSize(10);
     // debugf("max note error %f\n", maxError);
     // return 0;

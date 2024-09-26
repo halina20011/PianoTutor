@@ -86,7 +86,7 @@ void inputAddInput(void *value, enum InputType inputType, const char* message, v
     for(size_t i = 0; i < size; i++){
         char *str = va_arg(args, char*);
         flags[i] = strdup(str);
-        printf("added %s\n", flags[i]);
+        // printf("added %s\n", flags[i]);
     }
     input->flags = flags;
     input->flagsSize = size;
@@ -217,13 +217,13 @@ void parseInputType(struct Input *input, int i, char **argv){
 void parseInput(int argc, char **argv){
     for(int i = 1; i < argc; i++){
         bool matches = false;
-        printf("input size: %zu\n", inputParser.inputsSize);
+        // printf("input size: %zu\n", inputParser.inputsSize);
         for(size_t j = 0; j < inputParser.inputsSize && !matches; j++){
             // printf("j %i\n", j);
             struct Input *input = inputParser.inputs[j];
             size_t indexMatch = 0;
             for(size_t f = 0; f < input->flagsSize && !matches; f++){
-                printf("%s == %s\n", argv[i], input->flags[f]);
+                // printf("%s == %s\n", argv[i], input->flags[f]);
                 if(strcmp(argv[i], input->flags[f]) == 0){
                     matches = true;
                     indexMatch = f;
@@ -236,7 +236,7 @@ void parseInput(int argc, char **argv){
                     fprintf(stderr, "wrong numer of arguments for flag %s\n", input->flags[indexMatch]);
                     exit(1);
                 }
-                printf("match \"%s\"\n", input->flags[indexMatch]);
+                // printf("match \"%s\"\n", input->flags[indexMatch]);
                 if(input->dataType & INPUT_TYPE_ARRAY){
                     input->dataType = ~INPUT_TYPE_ARRAY;
                     fprintf(stderr, "not implemented\n");

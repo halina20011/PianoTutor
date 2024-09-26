@@ -12,10 +12,15 @@ enum PlotType{
     PLOT_NOTE_ERROR,
     PLOT_ALPHA,
     PLOT_DIVISION,
+    PLOT_SPEED_SCALE,
+    PLOT_WAIT_SCALE,
     PLOT_SIZE
 };
 
-void plotInit();
+void plotInit(void);
 void plot(enum PlotType plotType, float val);
+
+// void plotSet(enum PlotType plotType, float val);
+void plotFlush(void);
 
 #endif

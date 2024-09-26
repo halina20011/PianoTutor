@@ -1,13 +1,18 @@
-set title "Real-time Data Plot"
-set xlabel "Time"
-set ylabel "Value"
-set grid
-set autoscale xfixmin
-set autoscale yfixmin
-set term x11
+set title 'Real-time Data Plot';
+set xlabel 'Time';
+set ylabel 'Value';
+set grid;
+set autoscale xfixmin;
+set autoscale yfixmin;
 
-plot '-' using 1:2 with lines title 'Line1', \
-     '-' using 1:2 with lines title 'Line2', \
-     '-' using 1:2 with lines title 'Line3'
+# pause 1
 
-pause -1  # Keep window open after plot
+plot '.plot.dat' using 1:2 with lines title 'error', \
+    '.plot.dat' using 1:3 with lines title 'noteError', \
+    '.plot.dat' using 1:4 with lines title 'alpha', \
+    '.plot.dat' using 1:5 with lines title 'division';
+
+while (1) {
+    replot;
+    pause 0.001;
+}

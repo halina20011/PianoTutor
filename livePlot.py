@@ -1,60 +1,40 @@
-# python-matplotlib
-# import matplotlib.pylot as plt
-# import sys
-#
-# def update():
-#     plt.ion();
-#     fig, ax = plt.subplots();
-#
-#     xData, yData = [], [];
-#
-#     while True:
-#         line = sys.stdin.readline();
-#         if(line):
-#             _, x, y = line.strip().split();
-#
-#             ax.clear();
-#             ax.plot(xData, yData, label="plot");
-
 import matplotlib
 import matplotlib.pyplot as plt
 import sys
-import time
 import signal
 
-ERROR_TYPE = "error";
-ALPHA_TYPE = "alpha";
-NOTE_ERROR_TYPE = "noteError";
-DIVISION_TYPE = "division";
+plotTypes = {};
+class PlotType:
+    def __init__(self, plotId, color, lineStyle):
+        self.plotId = plotId;
+        self.color = color;
+        self.lineStyle = lineStyle;
 
-# Define colors and line styles for different data types
-colors = {
-    ERROR_TYPE: "red",
-    ALPHA_TYPE: "gray",
-    NOTE_ERROR_TYPE: "green",
-    DIVISION_TYPE: "pink"
-}
+        self.data = {"x": [], "y": [], "line": None};
 
-lineStyles = {
-    ERROR_TYPE: "-",
-    # "dataType2": "--",
-    ALPHA_TYPE: "-.",
-    NOTE_ERROR_TYPE: "-",
-    DIVISION_TYPE: "-."
-}
+        global plotTypes
+        plotTypes[self.plotId] = self;
 
-# Global quit flag
-quit_flag = False
+PlotType("error", "red", "-");
+PlotType("alpha", "gray", "-");
+PlotType("noteError", "green", "-");
+PlotType("division", "pink", "-.");
+
+PlotType("speedScale", "blue", "-.");
+PlotType("waitScale", "red", "-.");
+
+# global quit flag
+quitFlag = False
 
 def signalHandler(sig, frame):
-    global quit_flag
-    quit_flag = True
-    print("Exiting plot...")
+    global quitFlag;
+    quitFlag = True;
+    print("Exiting plot...");
 
 # attach signal handler for graceful exit
-signal.signal(signal.SIGINT, signalHandler)
+signal.signal(signal.SIGINT, signalHandler);
 
-# custom pause function to prevent window from coming to the front
+# custom pause function to prevent window from coming to the front/focus
 def mypause(interval):
     # backend = plt.rcParams['backend']
     if matplotlib.backends.backend_registry.list_builtin(matplotlib.backends.BackendFilter.INTERACTIVE):
@@ -65,100 +45,100 @@ def mypause(interval):
                 canvas.draw()
             canvas.start_event_loop(interval)
 
-def update_plot():
-    global quit_flag
+def updatePlot():
+    global quitFlag, plotTypes
     xOffset = 0;
-    windowSize = 10
+    windowSize = 10;
 
-    plt.ion()  # Interactive mode on
-    fig, ax = plt.subplots()
+    plt.ion();  # Interactive mode on
+    fig, ax = plt.subplots();
 
-    # Set initial axis limits (adjust as needed)
-    ax.set_xlim(xOffset, windowSize)  # Fixed X-axis from 0 to 100
-    ax.set_ylim(0, 5)   # Fixed Y-axis (adjust based on your data range)
+    # set initial axis limits (adjust as needed)
+    ax.set_xlim(xOffset, windowSize);   # fixed X-axis from 0 to 100
+    ax.set_ylim(0, 5);                  # fixed Y-axis (adjust based on your data range)
 
-    # Lock the axis limits to prevent auto-scaling
-    ax.set_autoscale_on(False)
+    # lock the axis limits to prevent auto-scaling
+    ax.set_autoscale_on(False);
 
-    # Data containers for different types
-    data = {
-        ERROR_TYPE: {"x": [], "y": [], "line": None},
-        ALPHA_TYPE: {"x": [], "y": [], "line": None},
-        NOTE_ERROR_TYPE: {"x": [], "y": [], "line": None},
-        DIVISION_TYPE: {"x": [], "y": [], "line": None},
-        # "dataType2": {"x": [], "y": [], "line": None},
-        # "dataType3": {"x": [], "y": [], "line": None}
-    }
-
-    plt.show(block=False)  # Ensure the window opens without blocking
+    plt.show(block=False);  # ensure the window opens without blocking
 
     x = 0;
-
-    while not quit_flag:
-        line = sys.stdin.readline()  # Read a line from stdin
+    while not quitFlag:
+        line = sys.stdin.readline();  # Read a line from stdin
         # print(f"plot line {line}")
         if(line):
+            # print(line, end="");
             if("PLOT" not in line):
                 # print(line, end="");
                 continue;
+            
+            if("PLOT UPDATE" in line):
+                # print(line, end="");
+                mypause(0.000000000000000001);
+                ax.set_xlabel("Time");
+                ax.set_ylabel("Value");
+                ax.legend();
+                # print("update");
+                continue;
 
-            try:
-                # Parse the line, assuming format: "PLOT: [dataType] <var>"
-                _PLOT, dataType, y = line.strip().split()
-                # print(_PLOT, dataType, y);
-                dataType = dataType.strip("[]");
-                dataType = dataType.split("#")[0];
+            # try:
+            # parse the line, assuming format: "PLOT: [dataType] <var>"
+            _PLOT, dataType, y = line.strip().split();
+            # print(_PLOT, dataType, y);
+            dataType = dataType.strip("[]");
+            dataType = dataType.split("#")[0];
 
-                # print(dataType, x, y);
-                if(dataType == "x"):
-                    x = float(y);
-                    continue;
+            # print(dataType, x, y);
+            if(dataType == "x"):
+                x = float(y);
+                continue;
 
-                # x = float(y);
-                y = float(y)
-                # print(x, y);
+            y = float(y);
+            # print(x, y);
 
-                if(dataType in data):
-                    # Append new data points
-                    data[dataType]["x"].append(x)
-                    data[dataType]["y"].append(y)
+            # print(dataType in plotTypes)
+            if(dataType in plotTypes):
+                plot = plotTypes[dataType];
 
-                    # If the line doesn't exist yet, create it
-                    if data[dataType]["line"] is None:
-                        data[dataType]["line"], = ax.plot(
-                            data[dataType]["x"],
-                            data[dataType]["y"],
-                            label=dataType,
-                            color=colors[dataType],
-                            linestyle=lineStyles[dataType]
-                        )
-                    else:
-                        # Only update the data for the existing line
-                        data[dataType]["line"].set_xdata(data[dataType]["x"])
-                        data[dataType]["line"].set_ydata(data[dataType]["y"])
+                # append new data points
+                plot.data["x"].append(x);
+                plot.data["y"].append(y);
+                
+                # print(plot.data["line"] is None);
 
-                    # ax.set_xlabel("Time")
-                    # ax.set_ylabel("Value")
-                    # ax.legend()
+                # if the line doesn't exist yet, create it
+                if(plot.data["line"] is None):
+                    plot.data["line"], = ax.plot(
+                        plot.data["x"],
+                        plot.data["y"],
+                        label=dataType,
+                        color=plot.color,
+                        linestyle=plot.lineStyle
+                    );
+                else:
+                    # only update the data for the existing line
+                    plot.data["line"].set_xdata(plot.data["x"]);
+                    plot.data["line"].set_ydata(plot.data["y"]);
 
-                    if x > xOffset + windowSize:
-                        xOffset += windowSize;
-                        ax.set_xlim(xOffset, xOffset + windowSize)  # Fixed X-axis from 0 to 100
+                if(xOffset + windowSize < x):
+                    xOffset += windowSize;
+                    ax.set_xlim(xOffset, xOffset + windowSize);  # Fixed X-axis from 0 to 100
 
-                    # recalculate limits based on current data
-                    # ax.relim()
-                    mypause(0.000000000000000001)
-
-            except Exception as exception:
-                print(exception);
-                pass
+                # plot = plotTypes[dataType];
+                # recalculate limits based on current data
+                # ax.relim()
+            else:
+                raise ValueError(f"data '{dataType}' type was not defined");
+            # except Exception as exception:
+            #     print(exception);
+            #     pass
         else:
-            quit_flag = True;
+            quitFlag = True;
             print("no line");
-            time.sleep(0.01)
+            # time.sleep(0.01)
 
-    plt.close(fig)
-    print("Plot closed.")
+    plt.close(fig);
+    print("closing plot");
 
 if __name__ == "__main__":
-    update_plot()
+    updatePlot();

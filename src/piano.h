@@ -65,9 +65,11 @@ void pianoPlayCalculateError();
 bool pianoPlayUpdate(struct Piano *piano);
 
 
+void printPlotEquation(void);
 float errorEquation(float p);
-float noteAlphaError(Pitch pitch, float notePercentage);
+double noteAlphaError(Pitch pitch, float notePercentage);
 float noteErrorSize(size_t steps);
+void plotNoteErrorSize(size_t to);
 void pianoPlayCalculateError(struct Piano *piano);
 void pianoRewind(struct Piano *piano);
 void turnNotes(struct Piano *piano);

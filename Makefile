@@ -21,9 +21,10 @@ plot: flags += --plot
 plot: make
 	# ./build/main ${flags} | tee /dev/tty | python livePlot.py
 	./build/main ${flags} | python livePlot.py
-# plot:
-# 	gcc ./build/test.c -lm -o ./build/main
-# 	./build/main ${flags} | tee /dev/tty | grep "PLOT: " | sed -n 's/PLOT: \[\(.*\)\] \(.*\)/\2/p' | tee /dev/tty | gnuplot -persist livePlot.gp
+
+gnuplot: flags += --showPlot
+gnuplot: make
+	./build/main ${flags} | tee /dev/tty | gnuplot -persist
 
 make:
 	cd build && make
