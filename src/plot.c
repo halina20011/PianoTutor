@@ -14,7 +14,7 @@ void plotFlush(){
         return;
     }
 
-    printf("PLOT UPDATE:\n");
+    printf("PLOT_UPDATE:\n");
     fflush(stdout);
     // printf("PLOT: ");
     // for(size_t i = 0; i < PLOT_SIZE; i++){
@@ -22,6 +22,22 @@ void plotFlush(){
     // }
     // printf("\n");
     // fflush(stdout);
+}
+
+void plotAction(enum PlotType *plotTypes, size_t size, bool enable){
+    if(enable){
+        printf("PLOT_ENABLE ");
+    }
+    else{
+        printf("PLOT_DISSABLE ");
+    }
+
+    for(size_t i = 0; i < size; i++){
+        printf("%s \n", plotNames[plotTypes[i]]);
+    }
+
+    printf("\n");
+    fflush(stdout);
 }
 
 void plot(enum PlotType plotType, float val){
@@ -43,6 +59,7 @@ void plotInit(){
     plotAssign(PLOT_ERROR, "error");
     plotAssign(PLOT_ALPHA, "alpha");
     plotAssign(PLOT_NOTE_ERROR, "noteError");
+    plotAssign(PLOT_NOTE_PREV_ERROR, "notePrevError");
     plotAssign(PLOT_DIVISION, "division");
     plotAssign(PLOT_SPEED_SCALE, "speedScale");
     plotAssign(PLOT_WAIT_SCALE, "waitScale");

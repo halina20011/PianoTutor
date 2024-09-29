@@ -61,11 +61,11 @@ struct Piano *pianoInit(struct Measure **measures, size_t measureSize, bool hide
 }
 
 char noteNames[][3] = {
-    "C", "C#", 
-    "D", "D#", 
+    "C", "C#",
+    "D", "D#",
     "E",
-    "F", "F#", 
-    "G", "G#", 
+    "F", "F#",
+    "G", "G#",
     "A", "A#",
     "H",
 };
@@ -121,14 +121,15 @@ void unpressNote(struct Piano *piano, size_t i){
 void pianoPlayInit(struct Piano *piano, enum PianoMode pianoMode){
     struct PianoPlay *pianoPlay = calloc(1, sizeof(struct PianoPlay));
 
-    glfwSwapInterval(7);
-    // glfwSwapInterval(0);
-    // if(plotEnabled){
-    //     glfwSwapInterval(7);
-    // }
+    // glfwSwapInterval(7);
+    glfwSwapInterval(0);
+    if(plotEnabled){
+        glfwSwapInterval(7);
+    }
     struct Measure **measures = piano->measures;
     updateAttributes(measures[0]->attributes[0], &pianoPlay->currAttributes);
 
+    pianoPlay->waitScale = 1;
     pianoPlay->speedScale = 1.0f;
     pianoPlay->currBmp = 120;
     piano->pianoPlay = pianoPlay;
@@ -177,21 +178,42 @@ float errorEquation(float p){
     return error;
 }
 
-double noteAlphaError(Pitch pitch, float notePercentage){
+double noteAlphaError(Pitch pitch, float notePercentage, bool add){
     double error = errorEquation(notePercentage);
     // double error = notePercentage * notePercentage;
     double prevError = interface->piano->pressedNotesPrevError[pitch];
     double errorAlpha = fabs(error - prevError);
-    interface->piano->pressedNotesError[pitch] += errorAlpha;
-    plot(PLOT_NOTE_ERROR, interface->piano->pressedNotesError[pitch]);
+    if(add){
+        interface->piano->pressedNotesError[pitch] += errorAlpha;
+    }
+
     interface->piano->pressedNotesPrevError[pitch] = fabs(error);
 
     return errorAlpha;
 }
 
+void plotNoteError(size_t step){
+    for(size_t i = 0; i < step; i++){
+        float t = (float)i / (float)step;
+        float e = errorEquation(t);
+        double alpha = noteAlphaError(0, t, true);
+        plot(PLOT_NOTE_ERROR, interface->piano->pressedNotesError[0]);
+        plot(PLOT_NOTE_PREV_ERROR, interface->piano->pressedNotesPrevError[0]);
+        // noteErrorSize(t);
+        // plot(PLOT_NOTE_ERROR, );
+        plot(PLOT_ERROR, e);
+        plot(PLOT_X, t);
+    }
+    plotFlush();
+    while(1){
+        for(uint32_t i = 0; i < UINT32_MAX; i++){}
+    }
+}
+
 void plotNoteErrorSize(size_t to){
     for(size_t i = 0; i < to; i++){
         float maxError = noteErrorSize(i);
+        plot(PLOT_NOTE_ERROR, interface->piano->pressedNotesError[0]);
         plot(PLOT_ERROR, maxError);
         plot(PLOT_X, i);
     }
@@ -207,7 +229,7 @@ float noteErrorSize(size_t steps){
     float sum = 0;
     for(size_t i = 0; i <= steps; i++){
         float p = (float)i / (float)steps;
-        float alpha = noteAlphaError(0, p);
+        float alpha = noteAlphaError(0, p, true);
         sum += alpha;
         // printf("%f %f\n", sum, alpha);
     }
@@ -229,29 +251,45 @@ void pianoPlayCalculateError(struct Piano *piano){
     struct PianoPlay *pianoPlay = piano->pianoPlay;
 
     float currError = 0;
+    float currCorrect = 0;
+    size_t correctNotes = 0;
     for(size_t n = 0; n < piano->playedNotesVector->size; n++){
         struct PlayedNote *playedNote = piano->playedNotesVector->data[n];
         Pitch pitch = notePitchToPitch(&playedNote->note->pitch);
+        
+        double notePercentage = (double)(pianoPlay->divisionCounter - playedNote->startDivision) / (double)(playedNote->note->duration) + pianoPlay->percentage * (1.0f / playedNote->note->duration);
+        // add manualy
+        float errorAlpha = noteAlphaError(pitch, notePercentage, false);
+        debugf("errorAlpha: %f\n", errorAlpha);
+
         // check if the played note is being pressed
-        // printf("%i %i\n", piano->pressedNotes[pitch], NOTE_UNPRESED);
         if(piano->pressedNotes[pitch] == NOTE_UNPRESED){
-            // debugf("note %i [%i:%s] should have been pressed\n", pitch, NOTE_OCTAVE(pitch), noteNames[pitch % 12]);
-            // double p = piano->pianoPlay->percentage;
-            double notePercentage = (double)(pianoPlay->divisionCounter - playedNote->startDivision) / (double)(playedNote->note->duration) + pianoPlay->percentage * (1.0f / playedNote->note->duration);
-            // printf("%f\n", p);
-            // printf("%f\n", notePercentage);
-            // double error = -4 * p * (1.0 - p);
-            float errorAlpha = noteAlphaError(pitch, notePercentage);
+            interface->piano->pressedNotesError[pitch] += errorAlpha;
+            plot(PLOT_NOTE_ERROR, interface->piano->pressedNotesError[pitch]);
             // piano->error += errorAlpha / piano->playedNotesVector->size;
             piano->error += errorAlpha;
             currError += errorAlpha;
         }
+        else{
+            correctNotes++;
+            currCorrect += errorAlpha;
+        }
     }
+
+    debugf("curr correct: %f\n", currCorrect);
 
     // slow down on error
     if(pianoPlay->pianoLearnMode == PIANO_LEARN_WAIT){
         if(currError == 0){
-            // pianoPlay->waitScale = 1;
+            if(pianoPlay->waitScale == 0 && correctNotes == piano->playedNotesVector->size){
+                pianoPlay->waitScale = 1;
+            }
+            // if(pianoPlay->waitScale == 0 && correctNotes == piano->playedNotesVector->size){
+            //     pianoPlay->waitScale = 0.1f;
+            // }
+            // else{
+            //     pianoPlay->waitScale = MIN(pianoPlay->waitScale + currCorrect, 1);
+            // }
         }
         else{
             float scale = 1.0f - piano->error;
@@ -319,6 +357,7 @@ void pianoRewind(struct Piano *piano){
     for(uint8_t i = 0; i < NOTE_PRESS_BUFFER_SIZE; i++){
         piano->pressedNotesError[i] = 0;
         piano->pressedNotesPrevError[i] = 0;
+        piano->pressedNotesDuration[i] = NOTE_DURATION_PRESS_NULL;
     }
 }
 
@@ -356,7 +395,7 @@ bool pianoPlayUpdate(struct Piano *piano){
     pianoPlay->prevTime = time;
 
     plot(PLOT_X, time);
-    debugf("piano error: %f\n", piano->error);
+    // debugf("piano error: %f\n", piano->error);
     plot(PLOT_ERROR, piano->error);
     plot(PLOT_DIVISION, pianoPlay->divisionTimer * 10.f);
     plot(PLOT_SPEED_SCALE, pianoPlay->speedScale);
@@ -442,9 +481,9 @@ bool pianoPlayUpdate(struct Piano *piano){
         struct PlayedNote *pressedNote = piano->playedNotesVector->data[i];
         if(pressedNote->endDivision <= piano->pianoPlay->divisionCounter){
             Pitch pitch = notePitchToPitch(&pressedNote->note->pitch);
-            printf("note[%i] error %f vs piano curr error: %f\n", pitch, piano->pressedNotesError[pitch], piano->error);
+            // debugf("note[%i] error %f vs piano curr error: %f\n", pitch, piano->pressedNotesError[pitch], piano->error);
             piano->error -= piano->pressedNotesError[pitch];
-            debugf("error: %f\n", piano->error);
+            // debugf("error: %f\n", piano->error);
             // debugf("error -= %f => %f\n", piano->pressedNotesError[pitch], piano->error);
             piano->pressedNotesError[pitch] = 0;
             piano->pressedNotesPrevError[pitch] = 0;
@@ -469,7 +508,7 @@ void pianoPlaySong(struct Piano *piano){
 
     while(!glfwWindowShouldClose(interface->g->window) && pianoPlay->measureIndex < piano->measureSize){
         draw(piano, KEYBOARD_SHEET_MODE);
-
+        
         if(!pianoPlayUpdate(piano)){
             continue;
         }
@@ -483,7 +522,6 @@ void pianoLearnSong(struct Piano *piano){
     pianoPlay->pianoLearnMode = PIANO_LEARN_WAIT;
     // pianoPlay->pianoLearnMode = PIANO_LEARN_PRACTISE;
 
-    pianoPlay->waitScale = 1;
     pianoPlay->speedScale = 0.5;
     
     while(!glfwWindowShouldClose(interface->g->window) && pianoPlay->measureIndex < piano->measureSize){

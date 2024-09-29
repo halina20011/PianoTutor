@@ -14,20 +14,42 @@ void debugPrint(const char *file, int line, const char *format, ...){
 extern struct Interface *interface;
 
 void checkFunction(void *thisFunc, void *callSite){
-    if(interface != NULL && interface->piano != NULL && interface->piano->blackKeysTrigCount != 0){
+    if(interface != NULL && interface->piano != NULL){
     // if(interface != NULL && interface->piano != NULL){
         fprintf(stderr, "variable was changed inside %p %p\n", thisFunc, callSite);
         exit(1);
     }
 }
 
+#define FUNCTION_NAME(p)do{\
+    Dl_info info;\
+    if(dladdr(p, &info) && info.dli_sname){\
+        fprintf(stderr, "%s ", info.dli_sname);\
+    }\
+    else{\
+        fprintf(stderr, "%p ", p);\
+    }\
+}while(0)
+
 void __cyg_profile_func_enter(void *thisFunc, void *callSite){
-    checkFunction(thisFunc, callSite);
-    // fprintf(stderr, "inside function %zu\n");
+    // checkFunction(thisFunc, callSite);
+    
+    fprintf(stderr, "entered function: ");
+    FUNCTION_NAME(thisFunc);
+    fprintf(stderr, "from ");
+    FUNCTION_NAME(callSite);
+
+    fprintf(stderr, "\n");
 }
 
 void __cyg_profile_func_exit(void *thisFunc, void *callSite){
-    checkFunction(thisFunc, callSite);
-    // fprintf(stderr, "outside of function %zu\n");
+    // checkFunction(thisFunc, callSite);
+    // fprintf(stderr, "outside of function %p %p\n", thisFunc, callSite);
+    fprintf(stderr, "exited function: ");
+    FUNCTION_NAME(thisFunc);
+    fprintf(stderr, "from ");
+    FUNCTION_NAME(callSite);
+
+    fprintf(stderr, "\n");
 }
 #endif

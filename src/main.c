@@ -9,13 +9,12 @@
 
 #include "plot.h"
 
-// TODO: use correct tempto from Song struct
-
+// TODO: program arguments
+// TODO: note lines fix
 // TODO: mouse scale sections/views
 // TODO: draw prev measure
 // TODO: repeats
 // TODO: better division
-// TODO: learnSong
 // TODO: pickup measure => strip start and end
 // TODO: correct bpm
 // TODO: tuplets
@@ -108,13 +107,15 @@ int main(int argc, char **argv){
     debugf("start, end: %i %i\n", start, end);
     computeKeyboard(piano, start, end);
 
+    // plotNoteError(100);
+
     // plotNoteErrorSize(100);
     // float maxError = noteErrorSize(10);
     // debugf("max note error %f\n", maxError);
     // return 0;
 
-    // pianoPlaySong(piano);
-    pianoLearnSong(piano);
+    pianoPlaySong(piano);
+    // pianoLearnSong(piano);
 
     glfwTerminate();
     return 0;

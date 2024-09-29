@@ -4,6 +4,7 @@ import sys
 import signal
 
 plotTypes = {};
+enabledPlots = {};
 class PlotType:
     def __init__(self, plotId, color, lineStyle):
         self.plotId = plotId;
@@ -18,6 +19,7 @@ class PlotType:
 PlotType("error", "red", "-");
 PlotType("alpha", "gray", "-");
 PlotType("noteError", "green", "-");
+PlotType("notePrevError", "blue", "-");
 PlotType("division", "pink", "-.");
 
 PlotType("speedScale", "blue", "-.");
@@ -72,7 +74,12 @@ def updatePlot():
                 # print(line, end="");
                 continue;
             
-            if("PLOT UPDATE" in line):
+            if("PLOT_ENABLE" in line):
+                print(line);
+                return;
+                continue;
+
+            if("PLOT_UPDATE" in line):
                 # print(line, end="");
                 mypause(0.000000000000000001);
                 ax.set_xlabel("Time");
@@ -98,6 +105,9 @@ def updatePlot():
 
             # print(dataType in plotTypes)
             if(dataType in plotTypes):
+                if(0 < len(enabledPlots) and dataType not in enabledPlots):
+                    continue;
+
                 plot = plotTypes[dataType];
 
                 # append new data points
@@ -121,6 +131,10 @@ def updatePlot():
                     plot.data["line"].set_ydata(plot.data["y"]);
 
                 if(xOffset + windowSize < x):
+                    xLim = ax.get_xlim();
+                    if(xLim != xOffset):
+                        continue;
+
                     xOffset += windowSize;
                     ax.set_xlim(xOffset, xOffset + windowSize);  # Fixed X-axis from 0 to 100
 

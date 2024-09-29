@@ -19,7 +19,6 @@ void inputInit(void (*funcArguments)()){
     (*funcArguments)();
 }
 
-
 size_t inputOptionSize(enum InputType type){
     switch(type){
         case INPUT_TYPE_NONE:

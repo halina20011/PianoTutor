@@ -108,10 +108,11 @@ void parseKey(xmlNodePtr part, KeySignature *keySignature){
         // https://w3c.github.io/musicxml/musicxml-reference/elements/fifths/
         if(xmlStrcmp(children->name, XML_CHAR"fifths") == 0){
             long r = parseBody(children);
-            if(r == 0){
-                *keySignature = 0;
-                continue;
-            }
+            // debugf("body: %i\n", r);
+            // if(r == 0){
+            //     *keySignature = 0;
+            //     continue;
+            // }
 
             *keySignature = r;
         }

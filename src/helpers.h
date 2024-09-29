@@ -1,6 +1,14 @@
 #ifndef HELPERS
 #define HELPERS
 
+// #define FUNCTION_CHECKER
+
+#ifdef FUNCTION_CHECKER
+#define _GNU_SOURCE
+#include <link.h>
+#include <dlfcn.h>
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <libgen.h>

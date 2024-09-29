@@ -152,7 +152,6 @@ uint8_t notePitchToPitch(struct NotePitch *pitch){
     return r;
 }
 
-
 uint16_t getMeasureNotesSize(xmlNodePtr note, struct Attributes *currAtrributes, MeasureSize *measureSize, StaffNumber *staffNumber){
     xmlNodePtr children = note->xmlChildrenNode;
     long division = 0;
@@ -200,7 +199,7 @@ void printMeasure(struct Measure *measure){
     for(StaffNumber staffIndex = 0; staffIndex < measure->stavesNumber; staffIndex++){
         Staff staff = measure->staffs[staffIndex];
         debugf("\n");
-        printf("staff[%i]\n", staffIndex);
+        printf("    staff[%i]\n", staffIndex);
         // for every buffer place in staff
         for(Division d = 0; d < measure->measureSize; d++){
             struct Notes *notes = staff[d];

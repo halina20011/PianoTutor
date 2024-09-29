@@ -143,6 +143,8 @@ struct Keyboard{
     float octaveWidth;
 };
 
+#define NOTE_DURATION_PRESS_NULL SIZE_MAX
+
 struct Piano{
     struct Measure **measures;
     size_t measureSize;
@@ -168,6 +170,7 @@ struct Piano{
     uint8_t pressedNotes[NOTE_PRESS_BUFFER_SIZE];
     float pressedNotesPrevError[NOTE_PRESS_BUFFER_SIZE];
     double pressedNotesError[NOTE_PRESS_BUFFER_SIZE];
+    size_t pressedNotesDuration[NOTE_PRESS_BUFFER_SIZE];
     struct PressedNoteVector *pressedNotesVector;
 
     struct PianoPlay *pianoPlay;

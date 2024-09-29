@@ -92,7 +92,8 @@ void addBeam(Staff staff, StaffNumber staffIndex, struct ItemPVector *itemVector
     float leftPos, rightPos, leftNoteWidth, rightNoteWidth;
     leftPos = staff[left]->x;
     leftNoteWidth = staff[left]->width;
-
+    
+    // debugf("right: %i\n", right);
     // if the beam is a hook then calculate the beam start/end
     if(GET_BIT(bP->firstBeam, BEAM_HOOK_ENABLED)){
         // find the closest note
@@ -112,7 +113,6 @@ void addBeam(Staff staff, StaffNumber staffIndex, struct ItemPVector *itemVector
         rightPos = staff[right]->x;
         rightNoteWidth = staff[right]->width;
     }
-
 
     // if the beam is downwards reset the note widht offset
     if(y < 0){

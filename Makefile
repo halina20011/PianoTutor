@@ -1,4 +1,6 @@
-flags = -f ~/Documents/Notes/Megalovania.mxl
+# flags = -f ~/Documents/Notes/Megalovania.mxl
+flags = -f ~/Documents/Notes/Gossip.mxl
+# flags = -f ~/Documents/Notes/Interstellar_-_Cornfield_Chase_Dorian_Marko_Cover.mxl
 # flags = -f ~/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mxl
 # flags = -f ~/Documents/Notes/Mr_Doctor_Man_-_Palaye_Royale.mxl
 # flags = -f ~/Documents/Notes/ainekuraine.mxl
@@ -11,6 +13,9 @@ flags = -f ~/Documents/Notes/Megalovania.mxl
 # flags = -f ~/Documents/Notes/Rats.mxl
 # flags = -f ~/Documents/Notes/Shreksophone__Shrek_and_Donkey.mxl
 # flags = -f ~/Documents/MuseScore4/Scores/test.mxl
+
+# flags += --play
+# flags += --learn
 
 # flags += --hide-keyboard --hide-notes
 
@@ -42,3 +47,6 @@ init:
 
 sync:
 	rsync -avz --exclude 'build' --exclude '.git' 192.168.11.245:/${HOME}/Programming/C/PianoTutor/ ./
+
+syncNotes:
+	rsync -avz 192.168.11.245:/${HOME}/Documents/Notes/ ~/Documents/Notes

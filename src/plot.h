@@ -9,6 +9,7 @@
 enum PlotType{
     PLOT_X,
     PLOT_ERROR,
+    PLOT_NOTE_PREV_ERROR,
     PLOT_NOTE_ERROR,
     PLOT_ALPHA,
     PLOT_DIVISION,
@@ -18,6 +19,7 @@ enum PlotType{
 };
 
 void plotInit(void);
+void plotAction(enum PlotType *plotTypes, size_t size, bool enable);
 void plot(enum PlotType plotType, float val);
 
 // void plotSet(enum PlotType plotType, float val);
