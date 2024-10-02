@@ -94,12 +94,14 @@ int main(int argc, char **argv){
         return 1;
     }
     
+    // debugMeasure(113);
+
     size_t measuresSize = 0;
     struct Measure **measures = readNotes(mxlFilePath, &measuresSize);
 
     struct Piano *piano = pianoInit(measures, measuresSize, hideKeyboard, hideNotes);
 
-    // piano->measureSize = 12;
+    // piano->measureSize = 136;
     computeMeasures(piano);
     // computeKeyboard(piano, &(struct NotePitch){0, 0, 0, 0}, &(struct NotePitch){6, 6, 0, 0});
     Pitch start = piano->sheet->staffsPitchExtreme[piano->sheet->staffNumber - 1].min;

@@ -52,7 +52,7 @@ enum Meshes getAccidental(struct Note *note){
         return FLAT;
     }
 
-    fprintf(stderr, "missing accidental value: '%i'\n");
+    fprintf(stderr, "missing accidental value\n");
     exit(1);
 }
 
@@ -323,9 +323,12 @@ void notesUpdateExtremes(struct Notes *notes, enum Clef clef, float *rMin, float
 }
 
 float computeMeasure(struct Piano *piano, size_t measureIndex, struct ItemPVector *itemVector, struct Attributes *currAttributes, NotePositionExtreme *staffsPositionNoteExtremes){
+    debugMeasurePosition(measureIndex);
+    // printf("mIndex: %zu\n", measureIndex);
+
     struct Measure *measure = piano->measures[measureIndex];
     // printf("\n\n");
-    // debugf("COMPUTING MEASURE %zu\n", measureIndex);
+    debugf("COMPUTING MEASURE %zu\n", measureIndex);
     // printMeasure(measure);
 
     StaffNumber staffNumber = piano->measures[0]->attributes[0]->stavesNumber;

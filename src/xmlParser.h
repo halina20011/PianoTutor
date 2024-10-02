@@ -24,7 +24,7 @@
 
 #define XML_CHAR (const xmlChar*)
 
-struct Attributes *attributesInit();
+struct Attributes *attributesInit(void);
 void updateAttributes(struct Attributes *attributes, struct Attributes *currAttributes);
 long parseBody(xmlNodePtr part);
 long parseProp(xmlNodePtr note, char *name);
@@ -42,6 +42,7 @@ struct Attributes *parseAttributes(xmlNodePtr part, struct Attributes *currAtrri
 
 // ./xmlNoteParser.c
 struct Note *parseNote(xmlNodePtr part, StaffNumber *staveIndex, bool *isChord);
+void noteNonZeroDuration(struct Note *note, size_t measureSize, struct Attributes *currAttribute);
 void notesMagazinePrint(struct NoteVectorPVector *notesVectorMagazine);
 void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size_t measureNoteSize);
 enum NoteType parseNoteType(xmlNodePtr node);

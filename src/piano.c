@@ -504,7 +504,8 @@ void pianoPlaySong(struct Piano *piano){
 
     struct PianoPlay *pianoPlay = piano->pianoPlay;
 
-    pianoPlay->speedScale = 0.4f;
+    // pianoPlay->speedScale = 0.4f;
+    pianoPlay->speedScale = 1;
 
     while(!glfwWindowShouldClose(interface->g->window) && pianoPlay->measureIndex < piano->measureSize){
         draw(piano, KEYBOARD_SHEET_MODE);

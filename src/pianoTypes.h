@@ -119,7 +119,7 @@ struct Notes{
 typedef struct Notes** Staff;
 
 struct Measure{
-    uint16_t sheetMeasureIndex;
+    Division sheetMeasureIndex;
     Staff *staffs;
     struct PitchExtreme *pitchExtreme;
     struct Attributes **attributes;

@@ -5,7 +5,8 @@ project(PianoTutor
 )
 
 set(CMAKE_C_STANDARD 17)
-set(CMAKE_C_FLAGS "-Wall -Wextra -Wshadow -O3")
+# set(CMAKE_C_FLAGS "-Wall -Wextra -Wshadow -O3")
+set(CMAKE_C_FLAGS "-Wall -Wextra -Wshadow -O0 -ggdb")
 # set(CMAKE_C_FLAGS "-Wall -Wextra -Wshadow -O0 -ggdb -finstrument-functions -rdynamic")
 
 find_package(PkgConfig REQUIRED)

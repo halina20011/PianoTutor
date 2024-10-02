@@ -41,31 +41,49 @@ struct Note *parseNote(xmlNodePtr part, StaffNumber *staveIndex, bool *isChord){
         children = children->next;
     }
 
-    // if(GET_BIT(note->flags, NOTE_FLAG_REST)){
-    //     debugf("new rest\n");
-    // }
-    // else{
-    //     debugf("new note (%i:%i:%c)\n", note->octave, note->step, note->stepChar);
-    // }
-    
+    if(GET_BIT(note->flags, NOTE_FLAG_REST)){
+        debugf("new rest\n");
+    }
+    else{
+        debugf("new note (%i:%i:%c)\n", note->pitch.octave, note->pitch.step, note->pitch.stepChar);
+    }
+
     return note;
 }
 
+void noteNonZeroDuration(struct Note *note, size_t measureSize, struct Attributes *currAttribute){
+    if(note->duration != 0){
+        return;
+    }
+
+    debugf("noteType: %i\n", note->noteType);
+    Division quarterDuration = measureSize / currAttribute->division;
+    debugf("quarterDuration: %i\n", quarterDuration);
+    if(note->noteType <= NOTE_TYPE_QUARTER){
+        note->duration = quarterDuration * (NOTE_TYPE_QUARTER - note->noteType + 1);
+    }
+    else{
+        note->duration = quarterDuration / (note->noteType - NOTE_TYPE_QUARTER);
+    }
+}
+
 void notesMagazinePrint(struct NoteVectorPVector *notesVectorMagazine){
+    DEBUG_CHECK();
+
     debugf("==== magazine ====\n");
     for(size_t i = 0; i < notesVectorMagazine->size; i++){
         struct NotePVector *currNoteVector = notesVectorMagazine->data[i];
-        debugf("%p [%zu]: ", currNoteVector, currNoteVector->size);
+        printf("%p [%zu]: ", currNoteVector, currNoteVector->size);
         for(size_t j = 0; j < currNoteVector->size; j++){
-            debugf("%p ", currNoteVector->data[j]);
+            printf("%p ", currNoteVector->data[j]);
         }
-        debugf("\n");
+        printf("\n");
     }
-    debugf("===== mag end ====\n");
+    printf("===== mag end ====\n");
 }
 
 void flushNotes(Staff staff, struct NoteVectorPVector *notesVectorMagazine, size_t measureNoteSize){
-    // notesMagazinePrint(notesVectorMagazine);
+    notesMagazinePrint(notesVectorMagazine);
     for(size_t i = 0; i < measureNoteSize; i++){
         // if the magazine is smaller then the buffer or the its empty
         // then the buffer with this index will be set to NULL
@@ -303,5 +321,5 @@ void parseBeam(xmlNodePtr parent, Beams *rBeams){
 
     SET_BEAM(*rBeams, number, beam);
     free(body);
-    // debugf("beam[%i] val: %i => %i\n", number, beam, *rBeams);
+    debugf("beam[%i] val: %i => %i\n", number, beam, *rBeams);
 }

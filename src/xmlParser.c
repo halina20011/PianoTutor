@@ -195,6 +195,8 @@ uint16_t getMeasureNotesSize(xmlNodePtr note, struct Attributes *currAtrributes,
 }
 
 void printMeasure(struct Measure *measure){
+    DEBUG_CHECK();
+
     // for every staff in the measure
     for(StaffNumber staffIndex = 0; staffIndex < measure->stavesNumber; staffIndex++){
         Staff staff = measure->staffs[staffIndex];
@@ -275,7 +277,9 @@ void measurePitchExtreme(struct Measure *measure, struct Note *note, StaffNumber
 
 struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notesVectorMagazine, struct Attributes *currAtrributes){
     uint16_t measureNumber = (uint16_t)parseProp(measure, "number");
-    // debugf("measure number: %li\n", measureNumber);
+    
+    debugMeasurePosition(measureNumber - 1);
+    debugf("measure number: %li\n", measureNumber - 1);
     struct Measure *m = calloc(1, sizeof(struct Measure));
     m->attributes = NULL;
     m->staffs = NULL;
@@ -332,7 +336,7 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
 
     StaffNumber staveIndex = 0, prevStaveIndex = 0;
     while(children){
-        // fprintf(stderr, "curr time: %li\n", currTime);
+        debugf("curr time: %li\n", currTime);
         if(xmlStrcmp(children->name, XML_CHAR"attributes") == 0){
             attributes[currTime] = parseAttributes(children, currAtrributes);
         }
@@ -340,6 +344,8 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
             bool isChord = false;
             
             struct Note *note = parseNote(children, &staveIndex, &isChord);
+            // check that note has non zero duration
+            noteNonZeroDuration(note, measureSize, currAtrributes);
             measurePitchExtreme(m, note, staveIndex);
             
             if(isChord){
@@ -363,10 +369,11 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
                 prevStaveIndex = staveIndex;
             }
 
+            debugf("note in [%zu]\n", currTime);
             struct NotePVector *noteVector = notesVectorMagazine->data[currTime];
 
             NotePVectorPush(noteVector, note);
-
+            debugf("%zu\n", note->duration);
             currTime += note->duration;
         }
         else if(xmlStrcmp(children->name, XML_CHAR"backup") == 0){
@@ -400,6 +407,8 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
     m->measureSize = measureSize;
     m->stavesNumber = currAtrributes->stavesNumber;
     m->attributes = attributes;
+
+    printMeasure(m);
 
     return m;
 }

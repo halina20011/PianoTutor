@@ -1,11 +1,58 @@
 #include "helpers.h"
 
+bool debug = true;
+
 void debugPrint(const char *file, int line, const char *format, ...){
+    if(!debug){
+        return;
+    }
+
     va_list args;
     va_start(args, format);
     printf("\x1b[38;2;0;255;255m[%s:%i]\x1b[0m ", basename(file), line);
     vprintf(format, args);
     va_end(args);
+}
+
+void debugPrintStatus(bool status){
+    debug = status;
+}
+
+bool debugPrintGetStatus(){
+    return debug;
+}
+
+bool debugAllMeasures = false;
+size_t measureDebugFrom = SIZE_MAX;
+size_t measureDebugTo = SIZE_MAX;
+
+void debugMeasureAll(bool b){
+    debugAllMeasures = b;
+}
+
+void debugMeasure(size_t measure){
+    measureDebugFrom = measure;
+    measureDebugTo = measure;
+}
+
+void debugMeasures(size_t from, size_t to){
+    measureDebugFrom = from;
+    measureDebugTo = to;
+}
+
+void debugMeasurePosition(size_t measure){
+    debug = false;
+
+    if(debugAllMeasures){
+        debug = true;
+    }
+
+    // printf("%i %i %i\n", measureDebugFrom, measure,measureDebugTo);
+    // printf("%i %i\n", measureDebugFrom <= measure, measure <= measureDebugTo);
+    if(measureDebugFrom <= measure && measure <= measureDebugTo){
+        printf("haiii :3\n");
+        debug = true;
+    }
 }
 
 #ifdef FUNCTION_CHECKER

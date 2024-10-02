@@ -11,6 +11,36 @@ void notesUpdateBeamDepth(struct Notes *notes, uint8_t *maxBeamDepth){
     *maxBeamDepth = beam;
 }
 
+void printBeams(struct BeamPosition *beams, size_t beamsSize){
+    DEBUG_CHECK();
+
+    // debugf("beams on depth %i: ", d);
+    for(Division i = 0; i < beamsSize; i++){
+        struct BeamPosition *b = &beams[i];
+        printf("[%i:%i] ", b->left, b->right);
+    }
+    printf("\n");
+}
+
+void printBeamArray(Staff staff, Division size, uint8_t beamDepth){
+    if(!debugPrintGetStatus()){
+        return;
+    }
+
+    debugf("beam array: \n", size);
+    for(Division d = 0; d < beamDepth; d++){
+        printf("%i:", d);
+        for(Division i = 0; i < size; i++){
+            struct Notes *firstNote = staff[i];
+            Beam beam = (!firstNote) ? 0 : GET_BEAM(firstNote->beams, beamDepth);
+            // printf("b:%i\n", beam);
+            printf("%i", beam != 0);
+        }
+
+        printf("\n");
+    }
+}
+
 void findBeams(Staff staff, Division size, struct BeamPosition *beams, uint8_t beamDepth, Division *rBeamsSize){
     Division beamsSize = 0;
     for(Division i = 0; i < size; ){
@@ -20,14 +50,21 @@ void findBeams(Staff staff, Division size, struct BeamPosition *beams, uint8_t b
             continue;
         }
         Beam firstNoteBeam = GET_BEAM(firstNote->beams, beamDepth);
+        debugf("division[%i] beam[%i]: %i\n", i, beamDepth, firstNoteBeam);
 
         Division right = i;
-        // debugf("right %i\n", right);
-        while(right < size){
+        debugf("right %i\n", right);
+        
+        // find next note that has beam flag off
+        while(right <= size){
+            if(right == size){
+                fprintf(stderr, "right is equal to size\n");
+                exit(1);
+            }
             struct Notes *notes = staff[right];
             if(notes){
                 Beam beam = GET_BEAM(notes->beams, beamDepth);
-                // debugf("note[%i] beams %i beam %i\n", right, notes->beams, beam);
+                debugf("note[%i] beams %i beam %i\n", right, notes->beams, beam);
                 if(beam && GET_BIT(beam, BEAM_OFF)){
                     break;
                 }
@@ -35,7 +72,7 @@ void findBeams(Staff staff, Division size, struct BeamPosition *beams, uint8_t b
             right++;
         }
         
-        // debugf("beam %i --- %i\n", i, right);
+        debugf("beam %i --- %i\n", i, right);
         beams[beamsSize].left = i;
         beams[beamsSize].right = right;
         beams[beamsSize].firstBeam = firstNoteBeam;
@@ -86,6 +123,7 @@ void addBeamSteam(struct Notes *notes, StaffNumber staffIndex, struct ItemPVecto
 // ---- ---
 // - -  
 void addBeam(Staff staff, StaffNumber staffIndex, struct ItemPVector *itemVector, struct BeamPosition *bP, float y){
+    debugf("staffIndex: %i\n", staffIndex);
     Division left = bP->left;
     Division right = bP->right;
 
@@ -110,6 +148,7 @@ void addBeam(Staff staff, StaffNumber staffIndex, struct ItemPVector *itemVector
         rightPos = leftPos + distance / 2;
     }
     else{
+        debugf("staff: %p r: %i\n", staff, right);
         rightPos = staff[right]->x;
         rightNoteWidth = staff[right]->width;
     }
@@ -125,6 +164,7 @@ void addBeam(Staff staff, StaffNumber staffIndex, struct ItemPVector *itemVector
 }
 
 void computeBeams(struct Measure *measure, StaffNumber staffIndex, struct ItemPVector *itemVector){
+    debugf("compute beams measure %zu staff %i\n", measure->sheetMeasureIndex - 1, staffIndex);
     Staff staff = measure->staffs[staffIndex];
     
     uint8_t maxBeamDepth = 0;
@@ -138,7 +178,7 @@ void computeBeams(struct Measure *measure, StaffNumber staffIndex, struct ItemPV
         }
     }
 
-    // debugf("max beam depth: %i\n", maxBeamDepth);
+    debugf("max beam depth: %i\n", maxBeamDepth);
 
     if(!maxBeamDepth){
         return;
@@ -152,12 +192,15 @@ void computeBeams(struct Measure *measure, StaffNumber staffIndex, struct ItemPV
     struct BeamInfo beamsInfo[measureSize];
     memset(beamsInfo, 0, sizeof(struct BeamInfo) * measureSize);
 
+    printBeamArray(staff, measure->measureSize, maxBeamDepth);
+    
     // find all the beam roots and calculate all needed things
     //  - y pos of the beam
     //  - offset of nth beam depth
     //  - TODO: calculate slope of the beam
     Division beamsSize = 0;
     findBeams(staff, measureSize, beams, 0, &beamsSize);
+    
 
     for(Division b = 0; b < beamsSize; b++){
         struct BeamPosition *bP = &beams[b];
@@ -207,16 +250,11 @@ void computeBeams(struct Measure *measure, StaffNumber staffIndex, struct ItemPV
         }
     }
     
-    // loop throw eatch beam depth and add the beam lines
+    // loop throw each beam depth and add the beam lines
     for(uint8_t d = 0; d < maxBeamDepth; d++){
-        // debugf("depth %i\n", d);
+        debugf("depth %i\n", d);
         findBeams(staff, measureSize, beams, d, &beamsSize);
-        // debugf("beams on depth %i: ", d);
-        for(Division i = 0; i < beamsSize; i++){
-            struct BeamPosition *b = &beams[i];
-            // printf("[%i:%i] ", b->left, b->right);
-        }
-        // printf("\n");
+        printBeams(beams, beamsSize);
 
         for(Division b = 0; b < beamsSize; b++){
             struct BeamPosition *bP = &beams[b];
