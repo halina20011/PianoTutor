@@ -145,6 +145,11 @@ struct Keyboard{
 
 #define NOTE_DURATION_PRESS_NULL SIZE_MAX
 
+struct PressedNoteInfo{
+    Division press;
+    Division duration;
+};
+
 struct Piano{
     struct Measure **measures;
     size_t measureSize;
@@ -164,13 +169,14 @@ struct Piano{
     double error;
     // notes that are being played by the sheet
     uint8_t playedNotes[NOTE_PRESS_BUFFER_SIZE];
+    Division playednotesInfo[NOTE_PRESS_BUFFER_SIZE];
     struct PlayedNotePVector *playedNotesVector;
     
-    // notes that re being pressed by the user
+    // notes that are being pressed by the user
     uint8_t pressedNotes[NOTE_PRESS_BUFFER_SIZE];
     float pressedNotesPrevError[NOTE_PRESS_BUFFER_SIZE];
     double pressedNotesError[NOTE_PRESS_BUFFER_SIZE];
-    size_t pressedNotesDuration[NOTE_PRESS_BUFFER_SIZE];
+    struct PressedNoteInfo pressedNotesInfo[NOTE_PRESS_BUFFER_SIZE];
     struct PressedNoteVector *pressedNotesVector;
 
     struct PianoPlay *pianoPlay;
@@ -185,6 +191,8 @@ enum PianoLearnMode{
     PIANO_LEARN_WAIT,
     PIANO_LEARN_PRACTISE,
 };
+
+#define ENABLED_STAFF(pianoPlay, staff) ((pianoPlay->hiddenStaff & (1 << staff)) != 0)
 
 struct PianoPlay{
     enum PianoMode pianoMode;
@@ -208,6 +216,10 @@ struct PianoPlay{
     int currTimerLevel;
     int fps;
     double percentage;
+
+    size_t measurePlayFrom, measurePlayTo;
+    bool prevWasError;
+    uint8_t hiddenStaff;
 };
 
 struct Sheet{
@@ -226,6 +238,7 @@ struct Sheet{
 struct PlayedNote{
     Division startDivision, endDivision;
     struct Note *note;
+    StaffNumber staff;
 };
 
 NEW_VECTOR_TYPE(struct PlayedNote*, PlayedNotePVector);

@@ -56,7 +56,7 @@ struct Piano *pianoInit(struct Measure **measures, size_t measureSize, bool hide
 void computeMeasures(struct Piano *piano);
 
 void pressedNotes(struct Piano *piano);
-void pressNote(struct Piano *piano, struct Note *note, Division divisionCounter);
+void pressNote(struct Piano *piano, struct Note *note, StaffNumber staff, Division divisionCounter);
 void unpressNote(struct Piano *piano, size_t i);
 
 void pianoPlayInit(struct Piano *piano, enum PianoMode pianoMode);

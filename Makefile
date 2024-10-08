@@ -1,9 +1,9 @@
-flags = -f ~/Documents/Notes/Megalovania.mxl
+# flags = -f ~/Documents/Notes/Megalovania.mxl
 # flags = -f ~/Documents/Notes/Gossip.mxl
 # flags = -f ~/Documents/Notes/redSunInTheSky.mxl
 # flags = -f ~/Documents/Notes/Shreksophone__Shrek_and_Donkey.mxl
 # flags = -f ~/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mxl
-# flags = -f ~/Documents/Notes/Mr_Doctor_Man_-_Palaye_Royale.mxl
+flags = -f ~/Documents/Notes/Mr_Doctor_Man_-_Palaye_Royale.mxl
 # flags = -f ~/Documents/Notes/ainekuraine.mxl
 # flags = -f ~/Documents/Notes/Bad_Apple_Original_ver.mxl
 # flags = -f ~/Documents/Notes/Giornos_Theme.mxl
@@ -23,6 +23,10 @@ flags = -f ~/Documents/Notes/Megalovania.mxl
 # flags = -f ~/Documents/Notes/maryOnACross.mxl
 # flags = -f ~/Documents/Notes/thomasTheTankEngine.mxl
 # flags = -f ~/Documents/Notes/anotherLoveTomOdell.xml
+# flags = -f ~/Documents/Notes/rammstein.mxl
+
+# fix time signature measure
+# flags = -f ~/Documents/Notes/nothingElseMatters.mxl
 
 # flags = -f ~/Documents/MuseScore4/Scores/test.mxl
 
@@ -58,7 +62,7 @@ init:
 	cd build && cmake ..
 
 sync:
-	rsync -avz --exclude 'build' --exclude '.git' 192.168.11.245:/${HOME}/Programming/C/PianoTutor/ ./
+	rsync -avz --exclude 'build' --exclude '.git' 192.168.11.242:/${HOME}/Programming/C/PianoTutor/ ./
 
 syncNotes:
-	rsync -avz 192.168.11.245:/${HOME}/Documents/Notes/ ~/Documents/Notes
+	rsync -avz 192.168.11.242:/${HOME}/Documents/Notes/ ~/Documents/Notes

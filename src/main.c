@@ -94,6 +94,7 @@ int main(int argc, char **argv){
         return 1;
     }
     
+    debugPrintStatus(true);
     // debugMeasure(113);
 
     size_t measuresSize = 0;
@@ -115,9 +116,11 @@ int main(int argc, char **argv){
     // float maxError = noteErrorSize(10);
     // debugf("max note error %f\n", maxError);
     // return 0;
+    
+    debugPrintStatus(true);
 
-    pianoPlaySong(piano);
-    // pianoLearnSong(piano);
+    // pianoPlaySong(piano);
+    pianoLearnSong(piano);
 
     glfwTerminate();
     return 0;

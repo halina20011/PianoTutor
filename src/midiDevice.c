@@ -80,7 +80,7 @@ void addNote(struct Piano *piano, uint8_t note){
 
     PressedNoteVectorPush(piano->pressedNotesVector, p);
     piano->pressedNotes[note] = index;
-    piano->pressedNotesDuration[note] = piano->pianoPlay->divisionCounter;
+    piano->pressedNotesInfo[note].press = piano->pianoPlay->divisionCounter;
     // pressedNotes(piano);
 }
 
@@ -100,7 +100,7 @@ void removeNote(struct Piano *piano, uint8_t note){
     }
     piano->pressedNotesVector->size--;
 
-    piano->pressedNotesDuration[note] = NOTE_DURATION_PRESS_NULL;
+    piano->pressedNotesInfo[note].press = NOTE_DURATION_PRESS_NULL;
     // pressedNotes(piano);
 }
 

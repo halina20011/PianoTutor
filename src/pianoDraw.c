@@ -276,6 +276,10 @@ void drawNotes(struct Piano *piano){
         struct Measure *measure = piano->measures[measureIndex];
         for(size_t s = 0; s < piano->sheet->staffNumber; s++){
             for(Division d = 0; d < measure->measureSize; d++){
+                if(!ENABLED_STAFF(pianoPlay, s)){
+                    continue;
+                }
+
                 float noteOffset = (float)pianoPlay->percentage * divisionScale;
                 float offset = currMeasureOffset + noteOffset;
                 // if(pianoPlay->measureIndex == measureIndex){
@@ -283,7 +287,7 @@ void drawNotes(struct Piano *piano){
                 // }
                 
                 float y = ((float)d + pianoPlay->pause) / (float)measure->measureSize + measuresOffset - offset;
-                     
+
                 glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)divisionLinesMat);
                 if(d == 0){
                     SET_COLOR(colorUniform, BLUE);
@@ -291,6 +295,7 @@ void drawNotes(struct Piano *piano){
                 else{
                     SET_COLOR(colorUniform, RED);
                 }
+
                 if(d % 8 == 0){
                     drawLine(0, y, 0, 2, y, 0);
                 }
@@ -310,7 +315,7 @@ void drawNotes(struct Piano *piano){
 
                     Pitch p = notePitchToPitch(&note->pitch);
                     enum Meshes meshId = NOTE_START + pitchToNote(p) - C;
-                    float height = ((float)note->duration / (float)measure->measureSize) * 0.9;
+                    float height = ((float)note->duration / (float)measure->measureSize) * 0.9f;
                     // float y = ((float)d + pianoPlay->pause) / (float)measure->measureSize + offset - pianoPlay->percentage;
 
                     
