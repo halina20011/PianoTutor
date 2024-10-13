@@ -26,7 +26,7 @@
 bool printHelp = false;
 char *mxlFilePath = NULL;
 char *midiDevicePath;
-char *mode;
+enum PianoMode mode;
 char *difficulty;
 
 char *difficulty;
@@ -54,7 +54,7 @@ void inputArguments(){
     ADD_FLAG1("--device", &midiDevicePath, INPUT_TYPE_STR, "specifi path to midi device\n\
             options: \"auto\", [absolutePath] [onlyMidiDeviceName]\n\
             auto option will use any device that matches /dev/snd/midi* (default value is auto)");
-    ADD_FLAG1("--mode", &mode, INPUT_TYPE_STR, "select mode [play, learn] (default is play)");
+    // ADD_FLAG1("--mode", &mode, INPUT_TYPE_STR, "select mode [play, learn] (default is play)");
 
     ADD_INPUT_OPTION("--learn-mode", &mode, INPUT_TYPE_STR, "select learn mode [wait, practise] (default is wait)", 
             2, "wait", "practise");
@@ -110,6 +110,16 @@ int main(int argc, char **argv){
     debugf("start, end: %i %i\n", start, end);
     computeKeyboard(piano, start, end);
 
+    setNoteStaffColors(piano, (struct Color[]){GREEN, BLUE}, 2);
+
+    mode = PIANO_MODE_PLAY;
+    // mode = PIANO_MODE_LEARN;
+    pianoPlayInit(piano, mode);
+
+    // pianoSetMeasureRange(piano, 4, 6);
+    // dissableStaff(piano, 0);
+    // enableStaff();
+
     // plotNoteError(100);
 
     // plotNoteErrorSize(100);
@@ -119,8 +129,12 @@ int main(int argc, char **argv){
     
     debugPrintStatus(true);
 
-    // pianoPlaySong(piano);
-    pianoLearnSong(piano);
+    if(mode == PIANO_MODE_PLAY){
+        pianoPlaySong(piano);
+    }
+    else{
+        pianoLearnSong(piano);
+    }
 
     glfwTerminate();
     return 0;

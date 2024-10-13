@@ -418,3 +418,19 @@ void computeKeyboard(struct Piano *piano, Pitch start, Pitch end){
     debugf("keyboardHeight: %f notesHeight %f\n", keyboardHeight, notesHeight);
     viewRecalc(&piano->view);
 }
+
+void pianoSetMeasureRange(struct Piano *piano, Division from, Division to){
+    piano->pianoPlay->measurePlayFrom = from;
+    piano->pianoPlay->measurePlayTo = to;
+    if(piano->pianoPlay->measureIndex < from){
+        piano->pianoPlay->measureIndex = from;
+    } 
+}
+
+void dissableStaff(struct Piano *piano, StaffNumber staffNumber){
+    piano->hiddenStaffs |= (1 << staffNumber);
+}
+
+void enableStaff(struct Piano *piano, StaffNumber staffNumber){
+    piano->hiddenStaffs &= ~(1 << staffNumber);
+}

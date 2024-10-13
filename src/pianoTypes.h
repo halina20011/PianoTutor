@@ -159,6 +159,10 @@ struct Piano{
     // map for enum Mesh => vertex position and vertex size
     size_t *meshesDataStart, *meshesDataSize;
     
+    // colors used while drawing notes
+    struct Color *noteStaffColors;
+    size_t noteStaffColorsSize;
+
     struct Keyboard keyboard;
 
     struct Sheet *sheet;
@@ -179,6 +183,7 @@ struct Piano{
     struct PressedNoteInfo pressedNotesInfo[NOTE_PRESS_BUFFER_SIZE];
     struct PressedNoteVector *pressedNotesVector;
 
+    uint32_t hiddenStaffs;
     struct PianoPlay *pianoPlay;
 };
 
@@ -191,8 +196,6 @@ enum PianoLearnMode{
     PIANO_LEARN_WAIT,
     PIANO_LEARN_PRACTISE,
 };
-
-#define ENABLED_STAFF(pianoPlay, staff) ((pianoPlay->hiddenStaff & (1 << staff)) != 0)
 
 struct PianoPlay{
     enum PianoMode pianoMode;
@@ -219,7 +222,6 @@ struct PianoPlay{
 
     size_t measurePlayFrom, measurePlayTo;
     bool prevWasError;
-    uint8_t hiddenStaff;
 };
 
 struct Sheet{

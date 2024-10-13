@@ -221,6 +221,7 @@ void drawSheet(struct Piano *piano){
 
         offset += itemMeasure->width * SHEET_STRETCH;
         float x = offset;
+        glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)cleanMat);
         drawLine(x, 4.f, 0, x, - barHeight, 1);
         offset += clearance;
     }
@@ -276,7 +277,7 @@ void drawNotes(struct Piano *piano){
         struct Measure *measure = piano->measures[measureIndex];
         for(size_t s = 0; s < piano->sheet->staffNumber; s++){
             for(Division d = 0; d < measure->measureSize; d++){
-                if(!ENABLED_STAFF(pianoPlay, s)){
+                if(!ENABLED_STAFF(piano, s)){
                     continue;
                 }
 
@@ -286,7 +287,7 @@ void drawNotes(struct Piano *piano){
                 //     debugf("%f => %f %f\n", offset, currMeasureOffset, noteOffset);
                 // }
                 
-                float y = ((float)d + pianoPlay->pause) / (float)measure->measureSize + measuresOffset - offset;
+                const float y = ((float)d + pianoPlay->pause) / (float)measure->measureSize + measuresOffset - offset;
 
                 glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)divisionLinesMat);
                 if(d == 0){
@@ -296,7 +297,7 @@ void drawNotes(struct Piano *piano){
                     SET_COLOR(colorUniform, RED);
                 }
 
-                if(d % 8 == 0){
+                if(0 < y && y < 1 && d % 8 == 0){
                     drawLine(0, y, 0, 2, y, 0);
                 }
 
@@ -305,8 +306,12 @@ void drawNotes(struct Piano *piano){
                     continue;
                 }
 
-                SET_COLOR(colorUniform, WHITE);
+                struct Color c = (piano->noteStaffColorsSize == 0) ? 
+                    WHITE : piano->noteStaffColors[s % piano->noteStaffColorsSize];
+                SET_COLOR(colorUniform, c);
                 for(size_t i = 0; i < notes->chordSize; i++){
+                    float yCopy = y;
+
                     struct Note *note = notes->chord[i];
                     
                     if(GET_BIT(note->flags, NOTE_FLAG_REST)){
@@ -316,18 +321,30 @@ void drawNotes(struct Piano *piano){
                     Pitch p = notePitchToPitch(&note->pitch);
                     enum Meshes meshId = NOTE_START + pitchToNote(p) - C;
                     float height = ((float)note->duration / (float)measure->measureSize) * 0.9f;
-                    // float y = ((float)d + pianoPlay->pause) / (float)measure->measureSize + offset - pianoPlay->percentage;
 
-                    
-                    // TODO: better notes clip
-                    // if(1 < y || y < -1){
-                    //     continue;
-                    // }
+                    float end = y + height;    
+                    // if note is out of the window item range
+                    if(1.0f < y || end <= 0.0f){
+                        continue;
+                    }
+
+                    // chec if notes height is out of the window item range
+                    if(1.0f < end){
+                        height -= (end - 1.0f);
+                    }
+
+                    if(yCopy < 0.0f){
+                        float diff = fabsf(yCopy);
+                        height -= diff;
+                        yCopy = 0;
+                    }
+
+                    SET_COLOR(colorUniform, c);
 
                     float octaveOffset = (int)(p / 12) - piano->keyboard.firstOctave;
                     mat4 matrix = {};
                     glm_mat4_copy(mat, matrix);
-                    glm_translate(matrix, (vec3){octaveOffset * piano->keyboard.octaveWidth, y, 0});
+                    glm_translate(matrix, (vec3){octaveOffset * piano->keyboard.octaveWidth, yCopy, 0});
                     glm_scale(matrix, (vec3){1, height, 1});
                     glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)matrix);
                     
@@ -341,10 +358,13 @@ void drawNotes(struct Piano *piano){
 
         measuresOffset += 1;
         if(3 + pianoPlay->measureIndex < measureIndex){
-            // break;
-            return;
+            break;
         }
     }
+
+    // glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)divisionLinesMat);
+    // SET_COLOR(colorUniform, WHITE);
+    // drawLine(0, 0, 0, 2, 0, 0);
 }
 
 void drawKeyboard(struct Piano *piano, enum KeyboardMode keyboardMode){
@@ -372,9 +392,9 @@ void drawKeyboard(struct Piano *piano, enum KeyboardMode keyboardMode){
     SET_COLOR(colorUniform, GRAY);
     glDrawArrays(GL_TRIANGLES, blackStartIndex, (GLint)vertexBufferGetSize(VERTEX_BUFFER_BLACK_KEYS));
 
-    size_t size = (keyboardMode == KEYBOARD_PIANO_MODE) ? piano->pressedNotesVector->size : piano->playedNotesVector->size;
+    size_t size = (keyboardMode == KEYBOARD_PRESSED_NOTES_MODE) ? piano->pressedNotesVector->size : piano->playedNotesVector->size;
     for(size_t i = 0; i < size; i++){
-        Pitch p = (keyboardMode == KEYBOARD_PIANO_MODE) ? 
+        Pitch p = (keyboardMode == KEYBOARD_PRESSED_NOTES_MODE) ? 
             piano->pressedNotesVector->data[i].pitch : 
             notePitchToPitch(&piano->playedNotesVector->data[i]->note->pitch);
 
@@ -406,4 +426,12 @@ void drawError(struct Piano *piano){
     vec3 pos = {-0.5, y, 0};
     vec3 scale = {1, 1, 1};
     drawLineWeight(start, end, pos, scale, height, localMatUniform);
+}
+
+void setNoteStaffColors(struct Piano *piano, struct Color colors[], size_t colorSize){
+    // free(piano->noteStaffColors);
+    size_t colorByteSize = sizeof(struct Color) * colorSize;
+    piano->noteStaffColors = malloc(colorByteSize);
+    memcpy(piano->noteStaffColors, colors, colorByteSize);
+    piano->noteStaffColorsSize = colorSize;
 }

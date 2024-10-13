@@ -31,9 +31,11 @@ typedef uint8_t MeshStrIdSize;
 
 #define NOTE_UNPRESED UINT8_MAX
 
+#define ENABLED_STAFF(piano, staff) ((piano->hiddenStaffs & (1 << staff)) == 0)
+
 enum KeyboardMode{
-    KEYBOARD_SHEET_MODE,
-    KEYBOARD_PIANO_MODE
+    KEYBOARD_PLAYED_NOTES_MODE,
+    KEYBOARD_PRESSED_NOTES_MODE
 };
 
 // pianoFunc.c
@@ -50,6 +52,9 @@ uint8_t getKeyType(uint8_t note);
 enum Meshes pitchToNote(Pitch p);
 enum PianoNotes mesheNoteToNote(enum Meshes note);
 void computeKeyboard(struct Piano *piano, Pitch start, Pitch end);
+
+void dissableStaff(struct Piano *piano, StaffNumber staffNumber);
+void enableStaff(struct Piano *piano, StaffNumber staffNumber);
 
 
 struct Piano *pianoInit(struct Measure **measures, size_t measureSize, bool hideKeyboard, bool hideNotes);
@@ -68,7 +73,7 @@ bool pianoPlayUpdate(struct Piano *piano);
 void plotNoteError(size_t step);
 void printPlotEquation(void);
 float errorEquation(float p);
-double noteAlphaError(Pitch pitch, float notePercentage, bool add);
+float noteAlphaError(Pitch pitch, float notePercentage, bool add, float multiplier);
 float noteErrorSize(size_t steps);
 void plotNoteErrorSize(size_t to);
 void pianoPlayCalculateError(struct Piano *piano);
@@ -81,7 +86,9 @@ void drawSheet(struct Piano *piano);
 void drawKeyboard(struct Piano *piano, enum KeyboardMode keyboardMode);
 void drawNotes(struct Piano *piano);
 void drawError(struct Piano *piano);
+void setNoteStaffColors(struct Piano *piano, struct Color colors[], size_t colorSize);
 
+void pianoSetMeasureRange(struct Piano *piano, Division from, Division to);
 void pianoPlaySong(struct Piano *piano);
 void pianoLearnSong(struct Piano *piano);
 
