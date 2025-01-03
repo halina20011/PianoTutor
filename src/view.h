@@ -19,10 +19,17 @@
 #include "helpers.h"
 
 enum ViewItemType{
+    VIEW_ITEM_TYPE_MEASURE_INFO,
     VIEW_ITEM_TYPE_SHEET,
     VIEW_ITEM_TYPE_NOTES,
-    VIEW_ITEM_TYPE_KEYBOARD
+    VIEW_ITEM_TYPE_KEYBOARD,
+    VIEW_ITEM_SIZE
 };
+
+// enum ViewItemFlag{
+//     VIEW_ITEM_FLAG_MANUAL_OFFSET,
+//     VIEW_ITEM_FLAG_AUTO_OFFSET,
+// };
 
 struct ViewItem{
     float height;
@@ -34,7 +41,7 @@ struct View{
     struct ViewItem *items;
 };
 
-void viewInit(struct View *view, size_t size);
+void viewInit(struct View *view);
 void viewRecalc(struct View *view);
 void viewReset(void);
 

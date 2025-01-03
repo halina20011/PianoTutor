@@ -3,7 +3,7 @@
 # flags = -f ~/Documents/Notes/redSunInTheSky.mxl
 # flags = -f ~/Documents/Notes/Shreksophone__Shrek_and_Donkey.mxl
 # flags = -f ~/Documents/Notes/Prlude_Opus_28_No._4_in_E_Minor__Chopin.mxl
-flags = -f ~/Documents/Notes/Mr_Doctor_Man_-_Palaye_Royale.mxl
+# flags = -f ~/Documents/Notes/Mr_Doctor_Man_-_Palaye_Royale.mxl
 # flags = -f ~/Documents/Notes/ainekuraine.mxl
 # flags = -f ~/Documents/Notes/Bad_Apple_Original_ver.mxl
 # flags = -f ~/Documents/Notes/Giornos_Theme.mxl
@@ -11,8 +11,16 @@ flags = -f ~/Documents/Notes/Mr_Doctor_Man_-_Palaye_Royale.mxl
 # flags = -f ~/Documents/Notes/kingForADay.mxl
 # flags = -f ~/Documents/Notes/theWorldDeathNote.mxl
 # flags = -f ~/Documents/Notes/canYouFeelMyHart.mxl
+# flags = -f ~/Documents/Notes/Beggin.mxl
+# flags = -f ~/Documents/Notes/The_loneliest__Maneskin.mxl
+# flags = -f ~/Documents/Notes/Zitti_e_Buoni.mxl
+# flags = -f ~/Documents/Notes/Among_Us_Drip_-_Leonz.mxl
 
 # flags = -f ~/Documents/Notes/
+# flags = -f ~/Documents/Notes/Lead_Me_Out_of_the_Dark.mxl
+flags = -f ~/Documents/Notes/everything_I_wanted.mxl
+# flags = -f ~/Documents/Notes/whatsUp.mxl
+# flags = -f ~/Documents/Notes/whatsUp2.mxl
 
 # flags = -f ~/Documents/Notes/Interstellar_-_Cornfield_Chase_Dorian_Marko_Cover.mxl
 # flags = -f ~/Documents/Notes/Life_Eternal__Ghost_Piano_advanced.mxl
@@ -24,6 +32,8 @@ flags = -f ~/Documents/Notes/Mr_Doctor_Man_-_Palaye_Royale.mxl
 # flags = -f ~/Documents/Notes/thomasTheTankEngine.mxl
 # flags = -f ~/Documents/Notes/anotherLoveTomOdell.xml
 # flags = -f ~/Documents/Notes/rammstein.mxl
+# flags = -f ~/Documents/Notes/superIdol.mxl
+# flags = -f ~/Documents/Notes/DEUTSCHLAND_-_RAMMSTEIN.mxl
 
 # fix time signature measure
 # flags = -f ~/Documents/Notes/nothingElseMatters.mxl

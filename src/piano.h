@@ -84,6 +84,7 @@ void turnNotes(struct Piano *piano);
 void draw(struct Piano *piano, enum KeyboardMode keyboardMode);
 void drawSheet(struct Piano *piano);
 void drawKeyboard(struct Piano *piano, enum KeyboardMode keyboardMode);
+void drawMeasureInfo(struct Piano *piano, mat4 cleanMat, vec3 scaleVec);
 void drawNotes(struct Piano *piano);
 void drawError(struct Piano *piano);
 void setNoteStaffColors(struct Piano *piano, struct Color colors[], size_t colorSize);

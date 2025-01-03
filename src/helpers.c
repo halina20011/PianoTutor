@@ -2,15 +2,19 @@
 
 bool debug = true;
 
+#define DEBUG_STREAM stderr
+// #define DEBUG_STREAM stdout
+
 void debugPrint(const char *file, int line, const char *format, ...){
-    if(!debug){
-        return;
-    }
+    // if(!debug){
+    //     return;
+    // }
 
     va_list args;
     va_start(args, format);
-    printf("\x1b[38;2;0;255;255m[%s:%i]\x1b[0m ", basename(file), line);
-    vprintf(format, args);
+    fprintf(DEBUG_STREAM, "\x1b[38;2;0;255;255m[%s:%i]\x1b[0m ", basename(file), line);
+    vfprintf(DEBUG_STREAM, format, args);
+    fflush(DEBUG_STREAM);
     va_end(args);
 }
 

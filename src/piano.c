@@ -44,7 +44,7 @@ struct Piano *pianoInit(struct Measure **measures, size_t measureSize, bool hide
 
     piano->keyboard.keysDataStart = malloc(sizeof(size_t) * KEYBOARD_KEY_SIZE);
     
-    viewInit(&piano->view, 3);
+    viewInit(&piano->view);
 
     // TODO: --hide-keyboard
     // TODO: --hide-notes 
@@ -54,6 +54,11 @@ struct Piano *pianoInit(struct Measure **measures, size_t measureSize, bool hide
     //
     // }
 
+    // if(hideKeyboard){
+    //     sheetHeight
+    // }
+    
+    // viewSet(&piano->view, VIEW_ITEM_TYPE_MEASURE_INFO, sheetHeight);
     viewSet(&piano->view, VIEW_ITEM_TYPE_SHEET, sheetHeight);
     // viewSet for keyboard and notes is set in computeKeyboard
     

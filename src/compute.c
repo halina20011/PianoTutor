@@ -10,8 +10,7 @@ extern struct MeshBoundingBox *meshBoundingBoxes;
 struct NotePitch sharp[7] = {P(3, 5), P(0, 5), P(4, 5), P(1, 5), P(5, 3), P(2, 5), P(6, 3)};
 struct NotePitch flats[7] = {P(6, 4), P(2, 5), P(5, 4), P(1, 5), P(4, 4), P(0, 5), P(3, 4)};
 
-float positionFromCenter(enum Clef clef, struct NotePitch *notePitch){
-    float pitch = TO_PITCH_P(notePitch);
+float clefPosition(enum Clef clef){
     float center = 0;
     if(CLEF_G_15_UP <= clef && clef <= CLEF_G_15_DOWN){
         // center h, 4 => 6, 4
@@ -27,6 +26,13 @@ float positionFromCenter(enum Clef clef, struct NotePitch *notePitch){
         fprintf(stderr, "clef %i not implemented\n", clef);
         exit(1);
     }
+
+    return center;
+}
+
+float positionFromCenter(enum Clef clef, struct NotePitch *notePitch){
+    float pitch = TO_PITCH_P(notePitch);
+    float center = clefPosition(clef);
 
     float p = pitch - center;
     // debugf("center %i[%i] - %f => %f\n", pitch, clef, center, p);
@@ -61,14 +67,18 @@ void calculateNotesSizes(Staff *staffs, StaffNumber staffSize, Division d, struc
     float noteMaxWidht = 0;
     float flagMaxWidth = 0;
 
+    // debugf("staffffffffff %i\n", staffSize);
     for(StaffNumber s = 0; s < staffSize; s++){
         Staff staff = staffs[s];
+        debugf("staff %p\n", staff);
         struct Notes *notes = staff[d];
         if(!notes){
             continue;
         }
 
         float min = FLT_MAX, max = FLT_MIN;
+        debugf("notes: %p\n", notes);
+        debugf("notes->chord: %p\n", notes->chord);
         struct Note **chord = notes->chord;
         for(ChordSize n = 0; n < notes->chordSize; n++){
             struct Note *note = chord[n];
@@ -301,9 +311,13 @@ void computeNotes(struct ItemPVector *itemVector, struct Notes *notes, StaffNumb
 
         enum Meshes meshId = noteFlag(note);
         if(FLAG1 <= meshId && meshId <= FLAG5){
+            // printf("%i\n", meshId);
+            // fflush(stdout);
+            // exit(1);
             bool invert = (side == BEAM_UPWARDS);
+            float noteWidthOffset = (0 < beamYPosition) ? 0: -notes->width;
             // struct Item *item = itemMeshInit(meshId, staffIndex, offset + accidentalOffset, beamYPosition);
-            struct Item *item = itemFlagInit(meshId, staffIndex, offset + accidentalOffset, beamYPosition, notes->width, invert);
+            struct Item *item = itemFlagInit(meshId, staffIndex, offset + accidentalOffset + noteWidthOffset, beamYPosition, notes->width, invert);
             ItemPVectorPush(itemVector, item);
         }
     }
@@ -329,7 +343,7 @@ float computeMeasure(struct Piano *piano, size_t measureIndex, struct ItemPVecto
     struct Measure *measure = piano->measures[measureIndex];
     // printf("\n\n");
     debugf("COMPUTING MEASURE %zu\n", measureIndex);
-    // printMeasure(measure);
+    printMeasure(measure);
 
     StaffNumber staffNumber = piano->measures[0]->attributes[0]->stavesNumber;
     // StaffNumber staffNumber = piano->sheet->staffNumber;
@@ -513,11 +527,13 @@ void computeMeasures(struct Piano *piano){
     
     struct MeshBoundingBox *sheetBoundingBox = &piano->boundingBox;
     meshBoundingBoxClear(sheetBoundingBox);
+    debugf("staffNumber: %i\n", staffNumber);
     // update every staff's boundingBox in measure
     for(MeasureSize m = 0; m < piano->measureSize; m++){
         struct Measure *measure = piano->measures[m];
         meshBoundingBoxClear(&measure->boundingBox);
         for(StaffNumber s = 0; s < staffNumber; s++){
+            // debugf("{%f %f %f}\n", measure->boundingBoxes);
             meshBoundingBoxUpdate(&measure->boundingBox, &measure->boundingBoxes[s], (vec3){0, -staffOffsets[s], 0});
             // staffOffsets[s]
         }

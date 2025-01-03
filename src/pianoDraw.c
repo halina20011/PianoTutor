@@ -58,6 +58,7 @@ void drawSheet(struct Piano *piano){
     viewUse(&piano->view, VIEW_ITEM_TYPE_SHEET);
 
     float yOffset = sheet->height / 2.0f;
+    // vec3 cursor = {-0.999999f, yOffset * scale, 0};
     vec3 cursor = {-0.8f, yOffset * scale, 0};
     float lastStaffOffset = piano->sheet->staffOffsets[piano->sheet->staffNumber - 1];
     float barHeight = lastStaffOffset + (piano->sheet->staffNumber - 1) * 4.f;
@@ -66,13 +67,14 @@ void drawSheet(struct Piano *piano){
     mat4 cleanMat = {};
     glm_mat4_identity(cleanMat);
     
-    // float __stretch = 2.0f;
-    // glm_scale(cleanMat, (vec3){__stretch, 1, 1}); // scale to the needed stretch
-    glm_translate(cleanMat, cursor);
-    // glm_scale(cleanMat, (vec3){1.0f / __stretch, 1, 1}); // scale back to not affect width
-    // glm_scale(cleanMat, (vec3){__stretch, 1, 1}); // scale to the needed stretch
+    glm_translate(cleanMat, (vec3){-1, yOffset * scale, 0});
 
+    drawMeasureInfo(piano, cleanMat, scaleVec);
+
+    glm_mat4_identity(cleanMat);
+    glm_translate(cleanMat, cursor);
     glm_scale(cleanMat, scaleVec);
+
     glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)cleanMat);
 
     struct PianoPlay *pianoPlay = piano->pianoPlay;
@@ -198,7 +200,7 @@ void drawSheet(struct Piano *piano){
                 SET_COLOR(colorUniform, WHITE);
 
                 size_t trigCount = piano->meshesDataSize[meshId] / 3;
-                GLint index = piano->meshesDataStart[meshId] / 3;
+                GLint index = piano->meshesDataStart[meshId] / 3 + vertexBufferGetPosition(VERTEX_BUFFER_MESHES);
                 
                 struct ItemFlag *flag = item->data;
 
@@ -233,6 +235,33 @@ void drawSheet(struct Piano *piano){
             float y = yOffset * 2.0f + staffOffset;
             drawLine(0, -y, 0, offset, -y, 0);
         }
+    }
+}
+
+// draw curr staff before the measure
+void drawMeasureInfo(struct Piano *piano, mat4 cleanMat, vec3 scaleVec){
+    glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)cleanMat);
+
+    SET_COLOR(colorUniform, WHITE);
+    struct Attributes *currAttributes = &piano->pianoPlay->currAttributes;
+    for(StaffNumber s = 0; s < currAttributes->stavesNumber; s++){
+        enum Meshes meshId = currAttributes->clefs[s];
+        float windowSize = 0.2f;
+        float clefSize = MBB_MAX(meshId)[0];
+        
+        mat4 mat = {};
+        glm_mat4_copy(cleanMat, mat);
+        
+        glm_translate_x(mat, (windowSize - clefSize * scaleVec[0]) / 2.0f);
+        
+        glm_scale(mat, scaleVec);
+        glm_translate_y(mat, -piano->sheet->staffOffsets[s]);
+        glUniformMatrix4fv(localMatUniform, 1, GL_FALSE, (float*)mat);
+
+        GLint index = piano->meshesDataStart[meshId] / 3 + vertexBufferGetPosition(VERTEX_BUFFER_MESHES);
+        size_t trigCount = piano->meshesDataSize[meshId] / 3;
+        
+        glDrawArrays(GL_TRIANGLES, index, trigCount);
     }
 }
 

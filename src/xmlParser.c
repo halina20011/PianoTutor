@@ -215,7 +215,7 @@ void printMeasure(struct Measure *measure){
                         printf("rest \n");
                     }
                     else{
-                        printf("(%i:%i:%c)\n", n->pitch.octave, n->pitch.step, n->pitch.stepChar);
+                        printf("(%i:%i:%c %s)\n", n->pitch.octave, n->pitch.step, n->pitch.stepChar, noteTypeNames[n->noteType]);
                     }
                 }
                 printf("\n");
@@ -236,7 +236,7 @@ void printMeasures(struct MeasurePVector *measuresVector){
 
 struct Measure **parseMeasures(xmlNodePtr part, size_t *measureSize){
     xmlNodePtr children = part->xmlChildrenNode;
-    
+
     struct MeasurePVector *measuresVector = MeasurePVectorInit();
 
     // TODO: repeats
@@ -268,11 +268,33 @@ void measurePitchExtreme(struct Measure *measure, struct Note *note, StaffNumber
     if(GET_BIT(note->flags, NOTE_FLAG_REST)){
         return;
     }
-    struct PitchExtreme *pitchExtreme = &measure->pitchExtreme[staffIndex];
+
+    struct PitchExtreme *pitchExtreme = &(measure->pitchExtreme[staffIndex]);
     Pitch p = notePitchToPitch(&note->pitch);
     // printf("pitch %i\n", p);
     pitchExtreme->min = MIN(pitchExtreme->min, p);
     pitchExtreme->max = MAX(pitchExtreme->max, p);
+}
+
+void printNodes(xmlNodePtr pointer){
+    debugf("xml node: ");
+    while(pointer){
+        char *c = (char*)pointer->name;
+        long s = strlen(c);
+        debugf("item size: %i '%s'\n", s, c);
+        bool noAlphanum = true;
+        while(*c || noAlphanum){
+            noAlphanum = isalnum(*c);
+            c++;
+        }
+        
+        if(!noAlphanum && xmlStrcmp("text", pointer->name) != 0){
+            printf("%s ", pointer->name);
+        }
+
+        pointer = pointer->next;
+    }
+    printf("\n");
 }
 
 struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notesVectorMagazine, struct Attributes *currAtrributes){
@@ -297,6 +319,7 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
             getMeasureNotesSize(children, currAtrributes, &measureSize, &staffNumber);
             numberOfAttributes++;
         }
+
         children = children->next;
     }
 
@@ -306,15 +329,25 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
         
         measureSize = division * denominator;
     }
+
     if(!staffNumber){
         staffNumber = currAtrributes->stavesNumber;
+        if(!staffNumber){
+            fprintf(stderr, "staffNumber is 0, setting up 2\n");
+            staffNumber = 2;
+        }
     }
 
     children = measure->xmlChildrenNode;
-    // debugf("staffNumber: %i measureSize: %i attributes: %li\n", staffNumber, measureSize, numberOfAttributes);
+    if(debugPrintGetStatus()){
+        printNodes(children);
+    }
+
+    debugf("staffNumber: %i measureSize: %i attributes: %li\n", staffNumber, measureSize, numberOfAttributes);
 
     struct Attributes **attributes = NULL;
     Staff *staffs = malloc(sizeof(Staff*) * staffNumber);
+    debugf("staff              dsflNumber: %i\n", staffNumber);
     m->pitchExtreme = calloc(staffNumber, sizeof(struct PitchExtreme));
     // printf("%i %i\n", PITCH_MIN, PITCH_MAX);
     for(StaffNumber s = 0; s < staffNumber; s++){
@@ -336,11 +369,9 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
 
     StaffNumber staveIndex = 0, prevStaveIndex = 0;
     while(children){
+        // debugf("curr time: %li\n", currTime);
         debugf("curr time: %li\n", currTime);
-        if(xmlStrcmp(children->name, XML_CHAR"attributes") == 0){
-            attributes[currTime] = parseAttributes(children, currAtrributes);
-        }
-        else if(xmlStrcmp(children->name, XML_CHAR"note") == 0){
+        if(xmlStrcmp(children->name, XML_CHAR"note") == 0){
             bool isChord = false;
             
             struct Note *note = parseNote(children, &staveIndex, &isChord);
@@ -386,6 +417,11 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
 
             currTime -= backup;
         }
+        else if(xmlStrcmp(children->name, XML_CHAR"attributes") == 0){
+            attributes[currTime] = parseAttributes(children, currAtrributes);
+        }
+        else if(xmlStrcmp(children->name, XML_CHAR"direction-type") == 0){
+        }
         children = children->next;
     }
 
@@ -405,7 +441,7 @@ struct Measure *parseMeasure(xmlNodePtr measure, struct NoteVectorPVector *notes
 
     m->staffs = staffs;
     m->measureSize = measureSize;
-    m->stavesNumber = currAtrributes->stavesNumber;
+    m->stavesNumber = staffNumber;
     m->attributes = attributes;
 
     printMeasure(m);

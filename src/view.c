@@ -9,9 +9,9 @@ struct Color colors[] = {
     RED, GREEN, BLUE, PURPLE
 }; 
 
-void viewInit(struct View *view, size_t size){
-    view->size = size;
-    view->items = malloc(sizeof(struct ViewItem) * size);
+void viewInit(struct View *view){
+    view->size = VIEW_ITEM_SIZE;
+    view->items = calloc(VIEW_ITEM_SIZE, sizeof(struct ViewItem));
 }
 
 void viewSet(struct View *view, enum ViewItemType type, float height){

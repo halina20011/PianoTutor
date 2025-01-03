@@ -39,24 +39,33 @@ enum Clef{
     CLEF_C,
 };
 
+#define GENERATE_ENUM(name) name,
+#define GENERATE_STRING(name) #name,
+
+#define FOREATCH_NOTE_TYPE(NOTE)    \
+    NOTE(NOTE_TYPE_NULL)            \
+    NOTE(NOTE_TYPE_MAXIMA)          \
+    NOTE(NOTE_TYPE_LONG)            \
+    NOTE(NOTE_TYPE_BREVE)           \
+    NOTE(NOTE_TYPE_WHOLE)           \
+    NOTE(NOTE_TYPE_HALF)            \
+    NOTE(NOTE_TYPE_QUARTER)         \
+    NOTE(NOTE_TYPE_EIGHTH)          \
+    NOTE(NOTE_TYPE_16TH)            \
+    NOTE(NOTE_TYPE_32ND)            \
+    NOTE(NOTE_TYPE_64TH)            \
+    NOTE(NOTE_TYPE_128TH)           \
+    NOTE(NOTE_TYPE_256TH)           \
+    NOTE(NOTE_TYPE_512TH)           \
+    NOTE(NOTE_TYPE_1024TH)
+
 enum NoteType{
-    NOTE_TYPE_NULL,
-    NOTE_TYPE_MAXIMA,
-    NOTE_TYPE_LONG,
-    NOTE_TYPE_BREVE,
-    NOTE_TYPE_WHOLE,
-    NOTE_TYPE_HALF,
-    NOTE_TYPE_QUARTER,
-    NOTE_TYPE_EIGHTH,
-    NOTE_TYPE_16TH,
-    NOTE_TYPE_32ND,
-    NOTE_TYPE_64TH,
-    NOTE_TYPE_128TH,
-    NOTE_TYPE_256TH,
-    NOTE_TYPE_512TH,
-    NOTE_TYPE_1024TH
+    FOREATCH_NOTE_TYPE(GENERATE_ENUM)
 };
 
+static const char* noteTypeNames[] = {
+    FOREATCH_NOTE_TYPE(GENERATE_STRING)
+};
 
 struct Attributes{
     Division division;

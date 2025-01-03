@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <float.h>
+#include <ctype.h>
 
 #include <libxml/parser.h>
 #include <libxml/tree.h>

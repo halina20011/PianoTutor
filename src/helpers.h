@@ -30,8 +30,11 @@
 void debugPrint(const char *file, int line, const char *format, ...);
 bool debugPrintGetStatus(void);
 void debugPrintStatus(bool status);
+
+// #define debugf(format, args...) fprintf(stderr, format, ##args)
 #define debugf(format, args...) debugPrint(__FILE__, __LINE__, format, ##args)
 // #define debugf(format, args...) printf(format, ##args)
+
 #define DEBUG_CHECK() if(!debugPrintGetStatus()) return;
 
 void debugMeasureAll(bool b);

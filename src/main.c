@@ -95,11 +95,12 @@ int main(int argc, char **argv){
     }
     
     debugPrintStatus(true);
-    // debugMeasure(113);
+    debugMeasure(1);
 
     size_t measuresSize = 0;
     struct Measure **measures = readNotes(mxlFilePath, &measuresSize);
 
+    hideKeyboard = true;
     struct Piano *piano = pianoInit(measures, measuresSize, hideKeyboard, hideNotes);
 
     // piano->measureSize = 136;
@@ -116,7 +117,7 @@ int main(int argc, char **argv){
     // mode = PIANO_MODE_LEARN;
     pianoPlayInit(piano, mode);
 
-    // pianoSetMeasureRange(piano, 4, 6);
+    // pianoSetMeasureRange(piano, 0, 2);
     // dissableStaff(piano, 0);
     // enableStaff();
 

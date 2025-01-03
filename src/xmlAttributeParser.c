@@ -1,4 +1,5 @@
 #include "xmlParser.h"
+#include "xmlTypes.h"
 
 #define MIN(a, b) ((a < b) ? a : b)
 
@@ -57,11 +58,12 @@ void updateAttributes(struct Attributes *attributes, struct Attributes *currAttr
 
 // https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/attributes/
 struct Attributes *parseAttributes(xmlNodePtr part, struct Attributes *currAtrributes){
+    debugf("parse attributes\n");
     struct Attributes *a = attributesInit();
     xmlNodePtr children = part->xmlChildrenNode;
     while(children){
         if(xmlStrcmp(children->name, XML_CHAR"divisions") == 0){
-            long division = parseBody(children);
+            Division division = (Division)parseBody(children);
             a->division = division;
 
             currAtrributes->division = division;
@@ -85,7 +87,7 @@ struct Attributes *parseAttributes(xmlNodePtr part, struct Attributes *currAtrri
             currAtrributes->numerator = numerator;
         }
         else if(xmlStrcmp(children->name, XML_CHAR"staves") == 0){
-            long numberOfStaves = parseBody(children);
+            StaffNumber numberOfStaves = (StaffNumber)parseBody(children);
             a->stavesNumber = numberOfStaves;
             a->clefs = calloc(numberOfStaves, sizeof(enum Clef));
             currAtrributes->stavesNumber = numberOfStaves;
@@ -96,7 +98,15 @@ struct Attributes *parseAttributes(xmlNodePtr part, struct Attributes *currAtrri
         children = children->next;
     }
     
+    debugf("number of staves: %i\n", a->stavesNumber);
     a->stavesNumber = currAtrributes->stavesNumber;
+    
+    if(a->stavesNumber == 0){
+        a->stavesNumber = 2;
+        // fprintf(stderr, "missing stave number\n");
+        // exit(1);
+    }
+
     return a;
 }
 
@@ -151,6 +161,8 @@ void parseTime(xmlNodePtr part, TimeSignature *numerator, TimeSignature *denomin
     // }
     //
 
+// <clef>
+// https://w3c.github.io/musicxml/musicxml-reference/elements/clef/
 void parseClef(xmlNodePtr part, struct Attributes *a, struct Attributes *currAtrributes){
     uint8_t number = 0;
     xmlChar *attValue = xmlGetProp(part, XML_CHAR"number");
@@ -188,8 +200,17 @@ void parseClef(xmlNodePtr part, struct Attributes *a, struct Attributes *currAtr
         children = children->next;
     }
 
+    debugf("%p\n", a->clefs);
     if(!a->clefs){
-        a->clefs = calloc(currAtrributes->stavesNumber, sizeof(enum Clef));
+        // fprintf(stderr, "reeeeeeeeeeeeeeee\n");
+        // exit(1);
+        debugf("stavesNumber: %i\n", currAtrributes->clefs);
+        // a->clefs = calloc(currAtrributes->stavesNumber, sizeof(enum Clef));
+        a->clefs = calloc(2, sizeof(enum Clef));
     }
+
+    debugf("number: %i\n", number);
+    debugf("%p\n", a->clefs);
+
     a->clefs[number] = clef - change;
 }
